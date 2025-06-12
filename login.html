@@ -13,11 +13,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- Custom Styles -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827; /* bg-gray-900 */
+            background-color: #111827;
         }
         h1, h2, h3, .font-cinzel {
             font-family: 'Cinzel', serif;
@@ -25,6 +28,10 @@
         .form-container {
             background-color: rgba(17, 24, 39, 0.8);
             backdrop-filter: blur(10px);
+        }
+        #message-box {
+            display: none;
+            transition: opacity 0.5s ease-in-out;
         }
     </style>
 </head>
@@ -41,8 +48,11 @@
                 <p class="text-gray-400">Acesse sua conta para continuar sua jornada.</p>
             </div>
 
+            <!-- Div para exibir mensagens de sucesso ou erro -->
+            <div id="message-box" class="p-4 mb-4 text-sm text-center rounded-lg"></div>
+
             <div class="form-container border border-purple-900/50 rounded-2xl shadow-2xl p-8">
-                <form action="#" method="POST" class="space-y-6">
+                <form id="login-form" class="space-y-6">
                     <!-- Email Input -->
                     <div>
                         <label for="email" class="block text-sm font-medium text-purple-200">Email</label>
@@ -55,21 +65,6 @@
                         <label for="password" class="block text-sm font-medium text-purple-200">Senha</label>
                         <input type="password" id="password" name="password" required
                                class="mt-1 block w-full bg-gray-800/50 border border-purple-800 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 transition">
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
-                            <label for="remember-me" class="ml-2 block text-sm text-gray-400">
-                                Lembrar-me
-                            </label>
-                        </div>
-
-                        <div class="text-sm">
-                            <a href="#" class="font-medium text-purple-400 hover:text-purple-300">
-                                Esqueceu a senha?
-                            </a>
-                        </div>
                     </div>
 
                     <!-- Submit Button -->
@@ -92,6 +87,72 @@
             </div>
         </div>
     </div>
+
+    <!-- Nosso script de configuração do Supabase -->
+    <script src="auth-config.js" defer></script>
+
+    <!-- Script para lidar com a lógica de login -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa os elementos da UI e funções auxiliares primeiro
+            const messageBox = document.getElementById('message-box');
+            
+            function showMessage(message, type = 'info') {
+                messageBox.textContent = message;
+                messageBox.style.display = 'block';
+
+                if (type === 'success') {
+                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-green-800 text-green-200';
+                } else if (type === 'error') {
+                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-red-800 text-red-200';
+                } else {
+                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-blue-800 text-blue-200';
+                }
+            }
+            
+            // Verifica se as variáveis de configuração do Supabase foram carregadas
+            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+                console.error('Variáveis do Supabase não encontradas. Verifique auth-config.js');
+                showMessage('Erro de configuração do cliente.', 'error');
+                return;
+            }
+
+            // Continua com a lógica principal
+            const { createClient } = supabase;
+            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            const loginForm = document.getElementById('login-form');
+
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const form = event.target;
+                const email = form.email.value;
+                const password = form.password.value;
+
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) {
+                    console.error('Erro no login:', error.message);
+                    showMessage('Email ou senha inválidos.', 'error');
+                    return;
+                }
+
+                if (data.user) {
+                    console.log('Login bem-sucedido!', data);
+                    showMessage('Login efetuado com sucesso! Redirecionando...', 'success');
+                    
+                    // Redireciona para a página principal após um curto período
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
