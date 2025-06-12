@@ -72,23 +72,33 @@
 
             if (error) {
                 console.error('Erro ao buscar produtos:', error);
-                productGrid.innerHTML = `<p class="text-center col-span-full">Não foi possível carregar os produtos. Tente novamente mais tarde.</p>`;
+                // **MELHORIA:** Exibe o erro detalhado na página para facilitar a depuração.
+                productGrid.innerHTML = `
+                    <div class="col-span-full text-center bg-red-900/50 border border-red-700 p-6 rounded-lg">
+                        <p class="font-bold text-lg text-red-300">Não foi possível carregar os produtos.</p>
+                        <p class="text-sm text-red-400 mt-2 font-mono"><strong>Erro:</strong> ${error.message}</p>
+                        <p class="text-sm text-gray-300 mt-4">Isto geralmente acontece por causa das permissões (RLS). Verifique se a sua tabela 'products' tem uma política que permite a leitura pública (SELECT) e se a RLS está ativada para a tabela.</p>
+                    </div>
+                `;
                 productGrid.classList.add('loaded');
                 return;
             }
 
             if (products.length === 0) {
-                productGrid.innerHTML = `<p class="text-center col-span-full">Nenhum produto encontrado na loja por enquanto.</p>`;
+                productGrid.innerHTML = `<p class="text-center col-span-full bg-gray-800/50 p-6 rounded-lg">Nenhum produto encontrado na loja por enquanto. Adicione produtos na sua tabela 'products' no Supabase.</p>`;
             } else {
                 products.forEach(product => {
+                    // Garante que o preço é um número antes de formatar
+                    const price = typeof product.price === 'number' ? product.price : 0;
+                    
                     const productCard = `
                         <div class="bg-gray-800/50 rounded-lg overflow-hidden shadow-lg border border-purple-900/30 glow-on-hover transform hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-                            <img src="${product.image_url}" alt="[Imagem de ${product.name}]" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/111827/FFFFFF?text=Imagem+Indisponível';">
+                            <img src="${product.image_url || 'https://placehold.co/400x300/111827/FFFFFF?text=Sem+Imagem'}" alt="[Imagem de ${product.name}]" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/111827/FFFFFF?text=Imagem+Inválida';">
                             <div class="p-6 flex flex-col flex-grow">
-                                <h3 class="text-xl font-bold text-purple-200">${product.name}</h3>
-                                <p class="mt-2 text-gray-400 flex-grow">${product.description}</p>
+                                <h3 class="text-xl font-bold text-purple-200">${product.name || 'Produto Sem Nome'}</h3>
+                                <p class="mt-2 text-gray-400 flex-grow">${product.description || 'Sem descrição.'}</p>
                                 <div class="mt-4 flex justify-between items-center">
-                                    <span class="text-2xl font-bold text-purple-300">R$ ${product.price.toFixed(2).replace('.', ',')}</span>
+                                    <span class="text-2xl font-bold text-purple-300">R$ ${price.toFixed(2).replace('.', ',')}</span>
                                     <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Comprar</button>
                                 </div>
                             </div>
