@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loja Mística - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .glow-on-hover:hover {
+            box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.4);
+        }
+        #product-grid.loaded {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
+                Portal Místico
+            </a>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-300">
+                    Meu Painel
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-8">
+        <h1 class="text-4xl font-cinzel text-center text-purple-300 mb-12">Nossos Tesouros Místicos</h1>
+
+        <div id="loader" class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            <p class="mt-4">A carregar os produtos...</p>
+        </div>
+        
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 opacity-0 transition-opacity duration-500">
+            <!-- Os produtos serão inseridos aqui pelo JavaScript -->
+        </div>
+    </main>
+
+    <script src="auth-config.js"></script>
+    <script>
+        // Usar o evento 'load' para garantir que TUDO, incluindo scripts externos, seja carregado.
+        window.addEventListener('load', async () => {
+            const productGrid = document.getElementById('product-grid');
+            const loader = document.getElementById('loader');
+
+            if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
+                console.error("Supabase ou ficheiro de configuração não carregado.");
+                loader.textContent = "Erro ao carregar a configuração da loja.";
+                return;
+            }
+
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            // Buscar produtos da tabela 'products'
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select('*');
+
+            loader.style.display = 'none';
+
+            if (error) {
+                console.error('Erro ao buscar produtos:', error);
+                productGrid.innerHTML = `<p class="text-center col-span-full">Não foi possível carregar os produtos. Tente novamente mais tarde.</p>`;
+                productGrid.classList.add('loaded');
+                return;
+            }
+
+            if (products.length === 0) {
+                productGrid.innerHTML = `<p class="text-center col-span-full">Nenhum produto encontrado na loja por enquanto.</p>`;
+            } else {
+                products.forEach(product => {
+                    const productCard = `
+                        <div class="bg-gray-800/50 rounded-lg overflow-hidden shadow-lg border border-purple-900/30 glow-on-hover transform hover:-translate-y-2 transition-transform duration-300 flex flex-col">
+                            <img src="${product.image_url}" alt="[Imagem de ${product.name}]" class="w-full h-56 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/111827/FFFFFF?text=Imagem+Indisponível';">
+                            <div class="p-6 flex flex-col flex-grow">
+                                <h3 class="text-xl font-bold text-purple-200">${product.name}</h3>
+                                <p class="mt-2 text-gray-400 flex-grow">${product.description}</p>
+                                <div class="mt-4 flex justify-between items-center">
+                                    <span class="text-2xl font-bold text-purple-300">R$ ${product.price.toFixed(2).replace('.', ',')}</span>
+                                    <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Comprar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    productGrid.innerHTML += productCard;
+                });
+            }
+
+            productGrid.classList.add('loaded');
+        });
+    </script>
+</body>
+</html>
