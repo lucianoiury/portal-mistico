@@ -94,38 +94,30 @@
     <!-- Script para lidar com a lógica de login -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Inicializa os elementos da UI e funções auxiliares primeiro
             const messageBox = document.getElementById('message-box');
             
             function showMessage(message, type = 'info') {
                 messageBox.textContent = message;
                 messageBox.style.display = 'block';
-
-                if (type === 'success') {
-                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-green-800 text-green-200';
-                } else if (type === 'error') {
-                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-red-800 text-red-200';
-                } else {
-                    messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-blue-800 text-blue-200';
-                }
+                const classMap = {
+                    success: 'bg-green-800 text-green-200',
+                    error: 'bg-red-800 text-red-200',
+                    info: 'bg-blue-800 text-blue-200'
+                };
+                messageBox.className = `p-4 mb-4 text-sm text-center rounded-lg ${classMap[type] || classMap['info']}`;
             }
             
-            // Verifica se as variáveis de configuração do Supabase foram carregadas
             if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
                 console.error('Variáveis do Supabase não encontradas. Verifique auth-config.js');
                 showMessage('Erro de configuração do cliente.', 'error');
                 return;
             }
 
-            // Continua com a lógica principal
-            const { createClient } = supabase;
-            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const loginForm = document.getElementById('login-form');
 
             loginForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-
                 const form = event.target;
                 const email = form.email.value;
                 const password = form.password.value;
@@ -145,9 +137,9 @@
                     console.log('Login bem-sucedido!', data);
                     showMessage('Login efetuado com sucesso! Redirecionando...', 'success');
                     
-                    // Redireciona para a página principal após um curto período
+                    // Redireciona para a página de DASHBOARD após um curto período
                     setTimeout(() => {
-                        window.location.href = 'index.html';
+                        window.location.href = 'dashboard.html';
                     }, 1500);
                 }
             });
