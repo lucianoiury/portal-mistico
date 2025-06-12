@@ -49,15 +49,19 @@
         </div>
     </main>
 
-    <script src="auth-config.js"></script>
+    <!-- O ficheiro auth-config.js foi removido. As chaves estão agora abaixo. -->
     <script>
         window.addEventListener('load', async () => {
             const productGrid = document.getElementById('product-grid');
             const loader = document.getElementById('loader');
 
-            if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
-                console.error("Supabase ou ficheiro de configuração não carregado.");
-                loader.textContent = "Erro ao carregar a configuração da loja.";
+            // Chaves do Supabase diretamente aqui para garantir o carregamento.
+            const SUPABASE_URL = 'https://zteetrqjvkgzkquyhocj.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZWV0cnFqdmtnemtxdXlob2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NzcxMTEsImV4cCI6MjA2NTI1MzExMX0.Qn--GbpQQMphZo5s4V3spodRAqvjc2xFVrwhfRkrY6M';
+
+            if (typeof supabase === 'undefined') {
+                console.error("A biblioteca do Supabase não foi carregada.");
+                loader.textContent = "Erro ao carregar a biblioteca da loja.";
                 return;
             }
 
