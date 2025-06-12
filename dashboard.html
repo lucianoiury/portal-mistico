@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        #content.loaded { opacity: 1; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 text-center p-4">
+        <div>
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            <p id="loader-message" class="mt-4 text-purple-200">A carregar os seus dados...</p>
+        </div>
+    </div>
+
+    <div id="content" class="container mx-auto p-8 opacity-0 transition-opacity duration-500">
+        <header class="flex justify-between items-center mb-12">
+            <h1 class="text-3xl font-cinzel text-purple-300">Meu Painel Místico</h1>
+            <button id="logout-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                Sair
+            </button>
+        </header>
+
+        <main class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
+            <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="user-name" class="text-purple-400">...</span>!</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <p class="text-sm text-gray-400">Email</p>
+                    <p id="user-email" class="text-lg">...</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-400">Sua Função</p>
+                    <p id="user-role" class="text-lg capitalize">...</p>
+                </div>
+                 <div id="profile-error" class="hidden p-4 mt-6 text-sm text-center rounded-lg bg-yellow-800 text-yellow-200">
+                    <strong>Atenção:</strong> Não conseguimos carregar os dados do seu perfil (nome e função). Parece que o seu perfil não foi criado corretamente durante o registo.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script de configuração carregado de forma síncrona -->
+    <script src="auth-config.js"></script>
+    <script>
+        // Usamos o evento 'DOMContentLoaded' que é mais rápido que 'load'
+        document.addEventListener('DOMContentLoaded', async () => {
+            const content = document.getElementById('content');
+            const loader = document.getElementById('loader');
+            const loaderMessage = document.getElementById('loader-message');
+
+            // Verifica se as dependências cruciais estão prontas.
+            if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
+                console.error("Supabase ou ficheiro de configuração não carregado.");
+                loaderMessage.textContent = "Erro crítico na configuração. Não foi possível carregar a página.";
+                return;
+            }
+
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            // Função para verificar a sessão do utilizador
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                // Se não houver sessão, redireciona imediatamente para o login.
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const user = session.user;
+            
+            // Carrega os dados do perfil
+            const userEmailEl = document.getElementById('user-email');
+            const userNameEl = document.getElementById('user-name');
+            const userRoleEl = document.getElementById('user-role');
+            const profileErrorEl = document.getElementById('profile-error');
+
+            userEmailEl.textContent = user.email;
+
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('full_name, role')
+                .eq('id', user.id)
+                .single();
+
+            if (error || !profile) {
+                console.error('Erro ao buscar perfil:', error);
+                userNameEl.textContent = user.email; 
+                userRoleEl.textContent = 'Não definido';
+                profileErrorEl.classList.remove('hidden');
+            } else {
+                userNameEl.textContent = profile.full_name;
+                userRoleEl.textContent = profile.role;
+            }
+
+            // Esconde o loader e mostra o conteúdo
+            loader.style.display = 'none';
+            content.classList.add('loaded');
+
+            // Lógica do botão de logout
+            const logoutButton = document.getElementById('logout-button');
+            logoutButton.addEventListener('click', async () => {
+                await supabaseClient.auth.signOut();
+                window.location.href = 'index.html';
+            });
+        });
+    </script>
+</body>
+</html>
