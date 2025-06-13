@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprar Créditos - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
+                Portal Místico
+            </a>
+            <div>
+                <a href="dashboard.html" class="hover:text-purple-300 transition-colors">Meu Painel</a>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" class="container mx-auto p-8">
+        <div class="text-center">
+            <h1 class="text-4xl font-cinzel text-purple-300 mb-4">Comprar Créditos para o Chat</h1>
+            <p class="text-lg text-gray-400 mb-2">Seu saldo atual: <span id="current-balance" class="font-bold text-white">--</span> minutos</p>
+            <p id="feedback-message" class="h-6 text-green-400"></p>
+        </div>
+
+        <div id="loader" class="text-center py-10">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+        </div>
+
+        <div id="packages-container" class="hidden mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Pacote de 15 minutos -->
+            <div class="bg-gray-800/50 p-8 rounded-lg border border-purple-900 text-center flex flex-col">
+                <h2 class="text-2xl font-bold text-purple-300">Pacote Iniciado</h2>
+                <p class="text-5xl font-cinzel my-4">15 <span class="text-xl">minutos</span></p>
+                <p class="text-gray-400 flex-grow">Perfeito para uma consulta rápida e direcionada.</p>
+                <button data-minutes="15" class="buy-btn mt-6 bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 w-full">
+                    Adicionar 15 Minutos
+                </button>
+            </div>
+            <!-- Pacote de 30 minutos -->
+            <div class="bg-gray-800/50 p-8 rounded-lg border-2 border-yellow-500 text-center flex flex-col relative">
+                 <div class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-yellow-500 text-gray-900 text-sm font-bold px-3 py-1 rounded-full">POPULAR</div>
+                <h2 class="text-2xl font-bold text-yellow-300">Pacote Essencial</h2>
+                <p class="text-5xl font-cinzel my-4">30 <span class="text-xl">minutos</span></p>
+                <p class="text-gray-400 flex-grow">Ideal para uma leitura completa e aprofundada.</p>
+                <button data-minutes="30" class="buy-btn mt-6 bg-yellow-500 text-gray-900 font-bold py-3 rounded-lg hover:bg-yellow-400 w-full">
+                    Adicionar 30 Minutos
+                </button>
+            </div>
+            <!-- Pacote de 60 minutos -->
+            <div class="bg-gray-800/50 p-8 rounded-lg border border-purple-900 text-center flex flex-col">
+                <h2 class="text-2xl font-bold text-purple-300">Pacote Mestre</h2>
+                <p class="text-5xl font-cinzel my-4">60 <span class="text-xl">minutos</span></p>
+                <p class="text-gray-400 flex-grow">Para múltiplas consultas ou uma sessão longa de autoconhecimento.</p>
+                <button data-minutes="60" class="buy-btn mt-6 bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 w-full">
+                    Adicionar 60 Minutos
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="auth-config.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const currentUser = session.user;
+            const balanceEl = document.getElementById('current-balance');
+            const feedbackEl = document.getElementById('feedback-message');
+            const loader = document.getElementById('loader');
+            const packagesContainer = document.getElementById('packages-container');
+
+            let currentMinutes = 0;
+
+            async function fetchBalance() {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('chat_credits_minutes')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) {
+                    console.error("Erro ao buscar saldo:", error);
+                    balanceEl.textContent = 'Erro!';
+                    return;
+                }
+
+                currentMinutes = data.chat_credits_minutes || 0;
+                balanceEl.textContent = currentMinutes;
+                loader.style.display = 'none';
+                packagesContainer.classList.remove('hidden');
+            }
+
+            async function addCredits(e) {
+                const minutesToAdd = parseInt(e.target.getAttribute('data-minutes'), 10);
+                const newTotal = currentMinutes + minutesToAdd;
+                
+                e.target.disabled = true;
+                e.target.textContent = 'A adicionar...';
+
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({ chat_credits_minutes: newTotal })
+                    .eq('id', currentUser.id);
+
+                if (error) {
+                    feedbackEl.textContent = "Erro ao adicionar créditos.";
+                    feedbackEl.classList.remove('text-green-400');
+                    feedbackEl.classList.add('text-red-400');
+                } else {
+                    currentMinutes = newTotal;
+                    balanceEl.textContent = newTotal;
+                    feedbackEl.textContent = `${minutesToAdd} minutos adicionados com sucesso!`;
+                    feedbackEl.classList.add('text-green-400');
+                    feedbackEl.classList.remove('text-red-400');
+                }
+                
+                e.target.disabled = false;
+                e.target.textContent = `Adicionar ${minutesToAdd} Minutos`;
+
+                setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
+            }
+
+            await fetchBalance();
+            
+            document.querySelectorAll('.buy-btn').forEach(button => {
+                button.addEventListener('click', addCredits);
+            });
+        });
+    </script>
+</body>
+</html>
