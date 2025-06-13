@@ -12,6 +12,15 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #111827; }
         .font-cinzel { font-family: 'Cinzel', serif; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+          appearance: none;
+        }
     </style>
 </head>
 <body class="text-gray-200">
@@ -27,15 +36,22 @@
         </nav>
     </header>
 
-    <main id="main-content" class="container mx-auto p-8">
+    <main id="main-content" class="container mx-auto p-4 md:p-8">
         <h1 class="text-4xl font-cinzel text-center text-purple-300 mb-12">Seu Carrinho Místico</h1>
         
-        <div id="cart-container" class="bg-gray-800/50 p-8 rounded-lg">
-            <!-- Itens do carrinho serão inseridos aqui -->
+        <div id="loader" class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            <p class="mt-4">A carregar o seu carrinho...</p>
         </div>
+        
+        <div class="md:grid md:grid-cols-3 md:gap-8">
+            <div id="cart-container" class="md:col-span-2 bg-gray-800/50 p-6 rounded-lg hidden">
+                <!-- Itens do carrinho serão inseridos aqui -->
+            </div>
 
-        <div id="summary" class="mt-8 text-right">
-             <!-- O resumo do carrinho irá aqui -->
+            <div id="summary" class="md:col-span-1 mt-8 md:mt-0 bg-gray-800/50 p-6 rounded-lg hidden h-fit">
+                 <!-- O resumo do carrinho irá aqui -->
+            </div>
         </div>
     </main>
 
@@ -53,76 +69,140 @@
             const currentUser = session.user;
             const cartContainer = document.getElementById('cart-container');
             const summaryContainer = document.getElementById('summary');
+            const loader = document.getElementById('loader');
+            let subtotal = 0;
+            let shippingCost = 0;
 
             async function renderCart() {
-                // Busca os itens do carrinho e os detalhes do produto associado
+                loader.style.display = 'block';
+                cartContainer.classList.add('hidden');
+                summaryContainer.classList.add('hidden');
+
                 const { data: cartItems, error } = await supabaseClient
                     .from('cart_items')
                     .select('id, quantity, products(name, price, image_url)')
-                    .eq('user_id', currentUser.id);
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: true });
 
-                cartContainer.innerHTML = ''; // Limpa o carrinho
-                summaryContainer.innerHTML = ''; // Limpa o resumo
-                let subtotal = 0;
+                loader.style.display = 'none';
+                cartContainer.innerHTML = '';
+                subtotal = 0;
 
                 if (error) {
                     cartContainer.innerHTML = `<p>Erro ao carregar o seu carrinho.</p>`;
+                    cartContainer.classList.remove('hidden');
                     return;
                 }
                 
                 if (cartItems.length === 0) {
-                    cartContainer.innerHTML = `<p class="text-center">O seu carrinho está vazio.</p>`;
+                    cartContainer.innerHTML = `<p class="text-center text-xl text-gray-400">O seu carrinho está vazio.</p>`;
+                    cartContainer.classList.remove('hidden');
+                    summaryContainer.classList.add('hidden');
                     return;
                 }
-
-                const tableHeader = `
-                    <div class="hidden md:grid grid-cols-6 gap-4 items-center mb-4 border-b border-purple-800 pb-2 font-bold">
-                        <div class="col-span-3">Produto</div>
-                        <div>Preço</div>
-                        <div>Quantidade</div>
-                        <div>Total</div>
-                    </div>
-                `;
+                
+                const tableHeader = `<h2 class="text-2xl font-bold mb-4">Itens no Carrinho</h2>`;
                 cartContainer.innerHTML += tableHeader;
 
                 cartItems.forEach(item => {
                     const product = item.products;
+                    if (!product) return; 
+                    
                     const itemTotal = product.price * item.quantity;
                     subtotal += itemTotal;
 
                     const cartRow = `
-                        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 items-center border-b border-gray-700 py-4">
-                            <div class="col-span-2 md:col-span-1">
-                                <img src="${product.image_url}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
-                            </div>
-                            <div class="col-span-2 md:col-span-2">
-                                <p class="font-bold">${product.name}</p>
-                            </div>
-                            <div class="text-center">R$ ${product.price.toFixed(2)}</div>
-                            <div class="text-center">${item.quantity}</div>
-                            <div class="flex items-center justify-end md:justify-start">
-                                <span class="font-bold">R$ ${itemTotal.toFixed(2)}</span>
-                                <button data-item-id="${item.id}" class="remove-item-btn ml-4 text-red-500 hover:text-red-400">✖</button>
-                            </div>
+                        <div class="grid grid-cols-5 gap-4 items-center border-b border-gray-700 py-4">
+                            <div class="col-span-1"><img src="${product.image_url}" alt="${product.name}" class="w-20 h-20 object-cover rounded-lg"></div>
+                            <div class="col-span-2"><p class="font-bold">${product.name}</p><p class="text-sm text-gray-400">R$ ${product.price.toFixed(2).replace('.',',')}</p></div>
+                            <div class="col-span-1"><input type="number" min="0" value="${item.quantity}" data-item-id="${item.id}" class="quantity-input w-16 text-center bg-gray-700 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"></div>
+                            <div class="col-span-1 text-right"><span class="font-bold">R$ ${itemTotal.toFixed(2).replace('.',',')}</span><button data-item-id="${item.id}" class="remove-item-btn ml-2 text-red-500 hover:text-red-400 font-mono" title="Remover Item">✖</button></div>
                         </div>
                     `;
                     cartContainer.innerHTML += cartRow;
                 });
                 
-                // Adiciona o resumo e o botão de finalizar
+                renderSummary();
+                cartContainer.classList.remove('hidden');
+                summaryContainer.classList.remove('hidden');
+                addEventListeners();
+            }
+
+            function renderSummary() {
+                const total = subtotal + shippingCost;
                 summaryContainer.innerHTML = `
-                    <p class="text-2xl font-bold">Subtotal: <span class="text-purple-300">R$ ${subtotal.toFixed(2)}</span></p>
-                    <button class="mt-4 bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700">Finalizar Compra</button>
+                    <h2 class="text-2xl font-bold mb-4">Resumo do Pedido</h2>
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><span>Subtotal:</span><span>R$ ${subtotal.toFixed(2).replace('.',',')}</span></div>
+                        <div class="flex justify-between"><span>Frete:</span><span id="shipping-cost">R$ ${shippingCost.toFixed(2).replace('.',',')}</span></div>
+                        <div class="border-t border-gray-600 my-2"></div>
+                        <div class="flex justify-between font-bold text-xl"><span>Total:</span><span class="text-purple-300">R$ ${total.toFixed(2).replace('.',',')}</span></div>
+                    </div>
+                    <div class="mt-6">
+                        <label for="cep-input" class="block mb-1 text-sm">Calcular Frete:</label>
+                        <div class="flex">
+                            <input type="text" id="cep-input" placeholder="Digite seu CEP" class="w-full bg-gray-700 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <button id="calculate-shipping-btn" class="bg-purple-600 px-4 rounded-r-md hover:bg-purple-700">Calcular</button>
+                        </div>
+                        <div id="cep-info" class="text-xs text-gray-400 mt-1 h-4"></div>
+                    </div>
+                    <a href="checkout.html" id="checkout-link" class="mt-6 block w-full text-center bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition-colors">Finalizar Compra</a>
                 `;
-                
-                // Adiciona os event listeners para os botões de remover
-                document.querySelectorAll('.remove-item-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const itemId = e.target.getAttribute('data-item-id');
-                        await supabaseClient.from('cart_items').delete().eq('id', itemId);
-                        renderCart(); // Re-renderiza o carrinho
-                    });
-                });
+            }
+            
+            function addEventListeners() {
+                document.querySelectorAll('.remove-item-btn').forEach(button => button.addEventListener('click', removeItem));
+                document.querySelectorAll('.quantity-input').forEach(input => input.addEventListener('change', updateQuantity));
+                document.getElementById('calculate-shipping-btn').addEventListener('click', calculateShipping);
+            }
+
+            async function removeItem(e) {
+                const itemId = e.target.getAttribute('data-item-id');
+                await supabaseClient.from('cart_items').delete().eq('id', itemId);
+                renderCart();
+            }
+            
+            async function updateQuantity(e) {
+                const itemId = e.target.getAttribute('data-item-id');
+                const newQuantity = parseInt(e.target.value, 10);
+                if (newQuantity < 1) {
+                    await supabaseClient.from('cart_items').delete().eq('id', itemId);
+                } else {
+                    await supabaseClient.from('cart_items').update({ quantity: newQuantity }).eq('id', itemId);
+                }
+                renderCart();
+            }
+
+            async function calculateShipping() {
+                const cepInput = document.getElementById('cep-input');
+                const cep = cepInput.value.replace(/\D/g, ''); // Remove non-digit characters
+                const cepInfo = document.getElementById('cep-info');
+
+                if (cep.length !== 8) {
+                    cepInfo.textContent = 'CEP inválido.';
+                    return;
+                }
+
+                cepInfo.textContent = 'Calculando...';
+
+                try {
+                    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await response.json();
+
+                    if (data.erro) {
+                        cepInfo.textContent = 'CEP não encontrado.';
+                        shippingCost = 0;
+                    } else {
+                        cepInfo.textContent = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
+                        shippingCost = 15.50;
+                        localStorage.setItem('shippingCost', shippingCost); // Salva o frete para a próxima página
+                    }
+                } catch (error) {
+                    cepInfo.textContent = 'Erro ao consultar o CEP.';
+                    shippingCost = 0;
+                }
+                renderSummary(); 
+                addEventListeners();
             }
 
             renderCart();
