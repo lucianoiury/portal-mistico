@@ -32,84 +32,79 @@
             </button>
         </header>
 
-        <main class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
-            <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="user-name" class="text-purple-400">...</span>!</h2>
-            
-            <div class="space-y-4">
-                <div>
-                    <p class="text-sm text-gray-400">Email</p>
-                    <p id="user-email" class="text-lg">...</p>
+        <main>
+            <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
+                <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="user-name" class="text-purple-400">...</span>!</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-400">Email</p>
+                        <p id="user-email" class="text-lg">...</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Sua Função</p>
+                        <p id="user-role" class="text-lg capitalize">...</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Créditos de Chat</p>
+                        <p id="user-credits" class="text-lg">-- minutos</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-400">Sua Função</p>
-                    <p id="user-role" class="text-lg capitalize">...</p>
-                </div>
-                 <div id="profile-error" class="hidden p-4 mt-6 text-sm text-center rounded-lg bg-yellow-800 text-yellow-200">
-                    <strong>Atenção:</strong> Não conseguimos carregar os dados do seu perfil (nome e função). Parece que o seu perfil não foi criado corretamente durante o registo.
+            </div>
+
+            <!-- Nova Secção de Ações Rápidas -->
+            <div class="mt-12 bg-gray-800/30 p-8 rounded-lg">
+                <h3 class="text-2xl font-cinzel text-center mb-6">Ações Rápidas</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <a href="tarologos.html" class="block text-center bg-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-purple-700 transition-colors text-lg">
+                        Consultar Tarólogos
+                    </a>
+                    <a href="creditos.html" class="block text-center bg-yellow-500 text-gray-900 font-bold py-4 px-6 rounded-lg hover:bg-yellow-400 transition-colors text-lg">
+                        Comprar Créditos
+                    </a>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Script de configuração carregado de forma síncrona -->
     <script src="auth-config.js"></script>
     <script>
-        // Usamos o evento 'DOMContentLoaded' que é mais rápido que 'load'
-        document.addEventListener('DOMContentLoaded', async () => {
+        window.addEventListener('load', async () => {
             const content = document.getElementById('content');
             const loader = document.getElementById('loader');
-            const loaderMessage = document.getElementById('loader-message');
 
-            // Verifica se as dependências cruciais estão prontas.
             if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
                 console.error("Supabase ou ficheiro de configuração não carregado.");
-                loaderMessage.textContent = "Erro crítico na configuração. Não foi possível carregar a página.";
                 return;
             }
 
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // Função para verificar a sessão do utilizador
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
-                // Se não houver sessão, redireciona imediatamente para o login.
                 window.location.href = 'login.html';
                 return;
             }
             
             const user = session.user;
             
-            // Carrega os dados do perfil
-            const userEmailEl = document.getElementById('user-email');
-            const userNameEl = document.getElementById('user-name');
-            const userRoleEl = document.getElementById('user-role');
-            const profileErrorEl = document.getElementById('profile-error');
-
-            userEmailEl.textContent = user.email;
-
             const { data: profile, error } = await supabaseClient
                 .from('profiles')
-                .select('full_name, role')
+                .select('full_name, role, chat_credits_minutes')
                 .eq('id', user.id)
                 .single();
 
-            if (error || !profile) {
-                console.error('Erro ao buscar perfil:', error);
-                userNameEl.textContent = user.email; 
-                userRoleEl.textContent = 'Não definido';
-                profileErrorEl.classList.remove('hidden');
-            } else {
-                userNameEl.textContent = profile.full_name;
-                userRoleEl.textContent = profile.role;
+            if (profile) {
+                document.getElementById('user-name').textContent = profile.full_name;
+                document.getElementById('user-email').textContent = user.email;
+                document.getElementById('user-role').textContent = profile.role;
+                document.getElementById('user-credits').textContent = `${profile.chat_credits_minutes || 0} minutos`;
             }
 
-            // Esconde o loader e mostra o conteúdo
             loader.style.display = 'none';
             content.classList.add('loaded');
 
-            // Lógica do botão de logout
-            const logoutButton = document.getElementById('logout-button');
-            logoutButton.addEventListener('click', async () => {
+            document.getElementById('logout-button').addEventListener('click', async () => {
                 await supabaseClient.auth.signOut();
                 window.location.href = 'index.html';
             });
