@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrinho de Compras - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
+                Portal Místico
+            </a>
+            <div>
+                <a href="loja.html" class="hover:text-purple-300 transition-colors">Continuar a Comprar</a>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" class="container mx-auto p-8">
+        <h1 class="text-4xl font-cinzel text-center text-purple-300 mb-12">Seu Carrinho Místico</h1>
+        
+        <div id="cart-container" class="bg-gray-800/50 p-8 rounded-lg">
+            <!-- Itens do carrinho serão inseridos aqui -->
+        </div>
+
+        <div id="summary" class="mt-8 text-right">
+             <!-- O resumo do carrinho irá aqui -->
+        </div>
+    </main>
+
+    <script src="auth-config.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const currentUser = session.user;
+            const cartContainer = document.getElementById('cart-container');
+            const summaryContainer = document.getElementById('summary');
+
+            async function renderCart() {
+                // Busca os itens do carrinho e os detalhes do produto associado
+                const { data: cartItems, error } = await supabaseClient
+                    .from('cart_items')
+                    .select('id, quantity, products(name, price, image_url)')
+                    .eq('user_id', currentUser.id);
+
+                cartContainer.innerHTML = ''; // Limpa o carrinho
+                summaryContainer.innerHTML = ''; // Limpa o resumo
+                let subtotal = 0;
+
+                if (error) {
+                    cartContainer.innerHTML = `<p>Erro ao carregar o seu carrinho.</p>`;
+                    return;
+                }
+                
+                if (cartItems.length === 0) {
+                    cartContainer.innerHTML = `<p class="text-center">O seu carrinho está vazio.</p>`;
+                    return;
+                }
+
+                const tableHeader = `
+                    <div class="hidden md:grid grid-cols-6 gap-4 items-center mb-4 border-b border-purple-800 pb-2 font-bold">
+                        <div class="col-span-3">Produto</div>
+                        <div>Preço</div>
+                        <div>Quantidade</div>
+                        <div>Total</div>
+                    </div>
+                `;
+                cartContainer.innerHTML += tableHeader;
+
+                cartItems.forEach(item => {
+                    const product = item.products;
+                    const itemTotal = product.price * item.quantity;
+                    subtotal += itemTotal;
+
+                    const cartRow = `
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 items-center border-b border-gray-700 py-4">
+                            <div class="col-span-2 md:col-span-1">
+                                <img src="${product.image_url}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
+                            </div>
+                            <div class="col-span-2 md:col-span-2">
+                                <p class="font-bold">${product.name}</p>
+                            </div>
+                            <div class="text-center">R$ ${product.price.toFixed(2)}</div>
+                            <div class="text-center">${item.quantity}</div>
+                            <div class="flex items-center justify-end md:justify-start">
+                                <span class="font-bold">R$ ${itemTotal.toFixed(2)}</span>
+                                <button data-item-id="${item.id}" class="remove-item-btn ml-4 text-red-500 hover:text-red-400">✖</button>
+                            </div>
+                        </div>
+                    `;
+                    cartContainer.innerHTML += cartRow;
+                });
+                
+                // Adiciona o resumo e o botão de finalizar
+                summaryContainer.innerHTML = `
+                    <p class="text-2xl font-bold">Subtotal: <span class="text-purple-300">R$ ${subtotal.toFixed(2)}</span></p>
+                    <button class="mt-4 bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700">Finalizar Compra</button>
+                `;
+                
+                // Adiciona os event listeners para os botões de remover
+                document.querySelectorAll('.remove-item-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const itemId = e.target.getAttribute('data-item-id');
+                        await supabaseClient.from('cart_items').delete().eq('id', itemId);
+                        renderCart(); // Re-renderiza o carrinho
+                    });
+                });
+            }
+
+            renderCart();
+        });
+    </script>
+</body>
+</html>
