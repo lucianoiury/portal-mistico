@@ -109,9 +109,10 @@
             // Carrega e exibe os produtos
             async function loadProducts() {
                 productsList.innerHTML = '<p>A carregar produtos...</p>';
-                const { data: products, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending: false });
+                // *** CORREÇÃO AQUI: Removida a ordenação por 'created_at' que não existe. ***
+                const { data: products, error } = await supabaseClient.from('products').select('*');
                 if (error) {
-                    productsList.innerHTML = `<p class="text-red-400">Erro ao carregar produtos.</p>`;
+                    productsList.innerHTML = `<p class="text-red-400">Erro ao carregar produtos: ${error.message}</p>`;
                     return;
                 }
                 productsList.innerHTML = '';
