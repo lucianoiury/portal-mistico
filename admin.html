@@ -12,6 +12,10 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #111827; }
         .font-cinzel { font-family: 'Cinzel', serif; }
+        .tab-btn.active {
+            background-color: #7e22ce; /* purple-700 */
+            color: white;
+        }
     </style>
 </head>
 <body class="text-gray-200">
@@ -34,43 +38,43 @@
         </header>
 
         <main class="container mx-auto p-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Formulário para Adicionar/Editar Produtos -->
-                <div class="lg:col-span-1">
-                    <form id="product-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
-                        <h2 id="form-title" class="text-2xl font-bold mb-4 text-purple-300">Adicionar Novo Produto</h2>
-                        <input type="hidden" id="product-id">
-                        <div>
-                            <label for="name" class="block mb-1">Nome do Produto</label>
-                            <input type="text" id="name" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        </div>
-                        <div>
-                            <label for="description" class="block mb-1">Descrição</label>
-                            <textarea id="description" rows="4" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
-                        </div>
-                        <div>
-                            <label for="price" class="block mb-1">Preço (ex: 99.90)</label>
-                            <input type="number" step="0.01" id="price" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        </div>
-                        <div>
-                            <label for="image_url" class="block mb-1">URL da Imagem</label>
-                            <input type="url" id="image_url" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        </div>
-                        <div class="flex space-x-4">
-                            <button type="submit" id="submit-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Adicionar Produto</button>
-                            <button type="button" id="clear-btn" class="w-full bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600">Limpar</button>
-                        </div>
-                    </form>
-                </div>
+            <!-- Abas de Navegação -->
+            <div class="mb-8 border-b border-gray-700">
+                <nav class="flex space-x-4" aria-label="Tabs">
+                    <button id="tab-products" class="tab-btn active text-gray-300 hover:text-white px-4 py-2 font-medium text-sm rounded-t-lg">Gerir Produtos</button>
+                    <button id="tab-orders" class="tab-btn text-gray-300 hover:text-white px-4 py-2 font-medium text-sm rounded-t-lg">Gerir Pedidos</button>
+                </nav>
+            </div>
 
-                <!-- Lista de Produtos Existentes -->
-                <div class="lg:col-span-2">
-                    <h2 class="text-2xl font-bold mb-4 text-purple-300">Produtos na Loja</h2>
-                    <div id="products-list" class="space-y-4">
-                        <!-- Produtos serão listados aqui -->
+            <!-- Conteúdo da Aba de Produtos -->
+            <div id="products-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <form id="product-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
+                            <h2 id="form-title" class="text-2xl font-bold mb-4 text-purple-300">Adicionar Novo Produto</h2>
+                            <input type="hidden" id="product-id">
+                            <div><label for="name" class="block mb-1">Nome</label><input type="text" id="name" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></div>
+                            <div><label for="description" class="block mb-1">Descrição</label><textarea id="description" rows="4" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea></div>
+                            <div><label for="price" class="block mb-1">Preço</label><input type="number" step="0.01" id="price" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></div>
+                            <div><label for="image_url" class="block mb-1">URL da Imagem</label><input type="url" id="image_url" required class="w-full bg-gray-700 p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"></div>
+                            <div class="flex space-x-4"><button type="submit" id="submit-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Adicionar</button><button type="button" id="clear-btn" class="w-full bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600">Limpar</button></div>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <h2 class="text-2xl font-bold mb-4 text-purple-300">Produtos na Loja</h2>
+                        <div id="products-list" class="space-y-4"></div>
                     </div>
                 </div>
             </div>
+
+            <!-- Conteúdo da Aba de Pedidos -->
+            <div id="orders-content" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-purple-300">Todos os Pedidos da Loja</h2>
+                <div id="orders-list" class="space-y-4">
+                    <!-- Pedidos serão listados aqui -->
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -80,22 +84,45 @@
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             let editingProductId = null;
 
-            // Elementos do DOM
+            // Elementos Globais
             const loader = document.getElementById('loader');
             const adminPanel = document.getElementById('admin-panel');
+            
+            // Elementos das Abas
+            const tabProducts = document.getElementById('tab-products');
+            const tabOrders = document.getElementById('tab-orders');
+            const productsContent = document.getElementById('products-content');
+            const ordersContent = document.getElementById('orders-content');
+            
+            // Elementos de Produtos
             const productForm = document.getElementById('product-form');
             const formTitle = document.getElementById('form-title');
             const submitBtn = document.getElementById('submit-btn');
             const productsList = document.getElementById('products-list');
             const clearBtn = document.getElementById('clear-btn');
             
-            // Verifica se o utilizador é admin
+            // Elementos de Pedidos
+            const ordersList = document.getElementById('orders-list');
+
+            // --- LÓGICA DAS ABAS ---
+            tabProducts.addEventListener('click', () => {
+                productsContent.classList.remove('hidden');
+                ordersContent.classList.add('hidden');
+                tabProducts.classList.add('active');
+                tabOrders.classList.remove('active');
+            });
+            tabOrders.addEventListener('click', () => {
+                ordersContent.classList.remove('hidden');
+                productsContent.classList.add('hidden');
+                tabOrders.classList.add('active');
+                tabProducts.classList.remove('active');
+                loadOrders(); // Carrega os pedidos ao mudar para a aba
+            });
+
+            // --- LÓGICA GERAL ---
             async function checkAdminStatus() {
                 const { data: { user } } = await supabaseClient.auth.getUser();
-                if (!user) {
-                    window.location.href = 'login.html';
-                    return;
-                }
+                if (!user) { window.location.href = 'login.html'; return; }
                 const { data: profile, error } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
                 if (error || profile.role !== 'admin') {
                     alert("Acesso negado. Esta área é restrita a administradores.");
@@ -106,112 +133,79 @@
                 adminPanel.classList.remove('hidden');
             }
 
-            // Carrega e exibe os produtos
+            // --- LÓGICA DE PRODUTOS ---
             async function loadProducts() {
                 productsList.innerHTML = '<p>A carregar produtos...</p>';
-                // *** CORREÇÃO AQUI: Removida a ordenação por 'created_at' que não existe. ***
-                const { data: products, error } = await supabaseClient.from('products').select('*');
-                if (error) {
-                    productsList.innerHTML = `<p class="text-red-400">Erro ao carregar produtos: ${error.message}</p>`;
-                    return;
-                }
+                const { data, error } = await supabaseClient.from('products').select('*').order('name', { ascending: true });
+                if (error) { productsList.innerHTML = `<p class="text-red-400">Erro ao carregar produtos.</p>`; return; }
                 productsList.innerHTML = '';
-                products.forEach(p => {
-                    const productCard = `
-                        <div class="bg-gray-800/50 p-4 rounded-lg flex items-center justify-between">
-                            <div class="flex items-center space-x-4">
-                                <img src="${p.image_url}" class="w-16 h-16 object-cover rounded-md">
-                                <div>
-                                    <p class="font-bold">${p.name}</p>
-                                    <p class="text-sm text-gray-400">R$ ${p.price.toFixed(2)}</p>
-                                </div>
-                            </div>
-                            <div class="space-x-2">
-                                <button data-id="${p.id}" class="edit-btn bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded-md hover:bg-yellow-400">Editar</button>
-                                <button data-id="${p.id}" data-name="${p.name}" class="delete-btn bg-red-600 text-white font-bold py-1 px-3 rounded-md hover:bg-red-500">Apagar</button>
-                            </div>
-                        </div>`;
-                    productsList.innerHTML += productCard;
+                data.forEach(p => {
+                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg flex items-center justify-between"><div class="flex items-center space-x-4"><img src="${p.image_url}" class="w-16 h-16 object-cover rounded-md"><div><p class="font-bold">${p.name}</p><p class="text-sm text-gray-400">R$ ${p.price.toFixed(2)}</p></div></div><div class="space-x-2"><button data-id="${p.id}" class="edit-btn bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded-md hover:bg-yellow-400">Editar</button><button data-id="${p.id}" data-name="${p.name}" class="delete-btn bg-red-600 text-white font-bold py-1 px-3 rounded-md hover:bg-red-500">Apagar</button></div></div>`;
+                    productsList.innerHTML += card;
+                });
+            }
+
+            // --- LÓGICA DE PEDIDOS ---
+            async function loadOrders() {
+                ordersList.innerHTML = '<p>A carregar pedidos...</p>';
+                const { data, error } = await supabaseClient.from('orders').select('*, profile:user_id (full_name)').order('created_at', { ascending: false });
+                if (error) { ordersList.innerHTML = `<p class="text-red-400">Erro ao carregar pedidos: ${error.message}</p>`; return; }
+                ordersList.innerHTML = '';
+                data.forEach(order => {
+                    const statusOptions = ['processando', 'pago', 'enviado', 'cancelado'];
+                    const optionsHtml = statusOptions.map(s => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('');
+                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg"><div class="flex justify-between items-start"><div><p class="font-bold">Pedido #${order.id.substring(0,8)}</p><p class="text-sm text-purple-300">${order.profile.full_name}</p><p class="text-xs text-gray-400">${new Date(order.created_at).toLocaleString()}</p></div><div class="text-right"><p class="font-bold text-lg">R$ ${order.total_amount.toFixed(2)}</p><select data-order-id="${order.id}" class="status-select bg-gray-700 p-1 rounded-md mt-1">${optionsHtml}</select></div></div></div>`;
+                    ordersList.innerHTML += card;
                 });
             }
             
-            // Submete o formulário (Criação ou Atualização)
+            ordersList.addEventListener('change', async (e) => {
+                if(e.target.classList.contains('status-select')) {
+                    const orderId = e.target.getAttribute('data-order-id');
+                    const newStatus = e.target.value;
+                    const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
+                    if (error) {
+                        alert("Erro ao atualizar o estado: " + error.message);
+                        loadOrders(); // Recarrega para reverter a mudança visual
+                    }
+                }
+            });
+
+
+            // --- INICIALIZAÇÃO E EVENT LISTENERS DE PRODUTOS ---
             productForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const productData = {
-                    name: e.target.name.value,
-                    description: e.target.description.value,
-                    price: parseFloat(e.target.price.value),
-                    image_url: e.target.image_url.value,
-                };
-                
+                const productData = { name: e.target.name.value, description: e.target.description.value, price: parseFloat(e.target.price.value), image_url: e.target.image_url.value };
                 let error;
                 if (editingProductId) {
-                    // Atualiza o produto
                     const { error: updateError } = await supabaseClient.from('products').update(productData).eq('id', editingProductId);
                     error = updateError;
                 } else {
-                    // Cria um novo produto
                     const { error: insertError } = await supabaseClient.from('products').insert([productData]);
                     error = insertError;
                 }
-
-                if (error) {
-                    alert('Erro ao guardar o produto: ' + error.message);
-                } else {
-                    resetForm();
-                    await loadProducts();
-                }
+                if (error) { alert('Erro ao guardar: ' + error.message); } else { resetForm(); await loadProducts(); }
             });
-
-            // Limpa o formulário
-            function resetForm() {
-                productForm.reset();
-                editingProductId = null;
-                formTitle.textContent = 'Adicionar Novo Produto';
-                submitBtn.textContent = 'Adicionar Produto';
-                submitBtn.classList.replace('bg-yellow-500', 'bg-green-600');
-            }
-            
+            function resetForm() { productForm.reset(); editingProductId = null; formTitle.textContent = 'Adicionar Novo Produto'; submitBtn.textContent = 'Adicionar'; submitBtn.classList.replace('bg-yellow-500', 'bg-green-600'); }
             clearBtn.addEventListener('click', resetForm);
-
-            // Adiciona listeners para os botões de editar e apagar
             productsList.addEventListener('click', async (e) => {
                 const target = e.target;
                 const id = target.getAttribute('data-id');
-                
                 if (target.classList.contains('edit-btn')) {
-                    const { data: product, error } = await supabaseClient.from('products').select('*').eq('id', id).single();
-                    if (error) {
-                        alert('Erro ao buscar produto para edição.');
-                        return;
-                    }
-                    productForm.name.value = product.name;
-                    productForm.description.value = product.description;
-                    productForm.price.value = product.price;
-                    productForm.image_url.value = product.image_url;
-                    
-                    editingProductId = product.id;
-                    formTitle.textContent = 'A Editar Produto';
-                    submitBtn.textContent = 'Guardar Alterações';
-                    submitBtn.classList.replace('bg-green-600', 'bg-yellow-500');
-                    window.scrollTo(0, 0);
+                    const { data: p, error } = await supabaseClient.from('products').select('*').eq('id', id).single();
+                    if (error) { alert('Erro ao buscar produto.'); return; }
+                    productForm.name.value = p.name; productForm.description.value = p.description; productForm.price.value = p.price; productForm.image_url.value = p.image_url;
+                    editingProductId = p.id; formTitle.textContent = 'A Editar Produto'; submitBtn.textContent = 'Guardar'; submitBtn.classList.replace('bg-green-600', 'bg-yellow-500'); window.scrollTo(0, 0);
                 }
-                
                 if (target.classList.contains('delete-btn')) {
-                    const name = target.getAttribute('data-name');
-                    if (confirm(`Tem a certeza que quer apagar o produto "${name}"?`)) {
+                    if (confirm(`Apagar o produto "${target.getAttribute('data-name')}"?`)) {
                         const { error } = await supabaseClient.from('products').delete().eq('id', id);
-                        if(error) {
-                            alert("Erro ao apagar o produto: " + error.message);
-                        } else {
-                            await loadProducts();
-                        }
+                        if(error) { alert("Erro ao apagar: " + error.message); } else { await loadProducts(); }
                     }
                 }
             });
 
-            // Inicialização
+            // --- INICIALIZAÇÃO PRINCIPAL ---
             await checkAdminStatus();
             await loadProducts();
         });
