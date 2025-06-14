@@ -148,13 +148,15 @@
             // --- LÓGICA DE PEDIDOS ---
             async function loadOrders() {
                 ordersList.innerHTML = '<p>A carregar pedidos...</p>';
-                const { data, error } = await supabaseClient.from('orders').select('*, profile:user_id (full_name)').order('created_at', { ascending: false });
+                // *** CORREÇÃO AQUI: A query agora busca 'profiles' em vez de 'profile' ***
+                const { data, error } = await supabaseClient.from('orders').select('*, profiles(full_name)').order('created_at', { ascending: false });
                 if (error) { ordersList.innerHTML = `<p class="text-red-400">Erro ao carregar pedidos: ${error.message}</p>`; return; }
                 ordersList.innerHTML = '';
                 data.forEach(order => {
                     const statusOptions = ['processando', 'pago', 'enviado', 'cancelado'];
                     const optionsHtml = statusOptions.map(s => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('');
-                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg"><div class="flex justify-between items-start"><div><p class="font-bold">Pedido #${order.id.substring(0,8)}</p><p class="text-sm text-purple-300">${order.profile.full_name}</p><p class="text-xs text-gray-400">${new Date(order.created_at).toLocaleString()}</p></div><div class="text-right"><p class="font-bold text-lg">R$ ${order.total_amount.toFixed(2)}</p><select data-order-id="${order.id}" class="status-select bg-gray-700 p-1 rounded-md mt-1">${optionsHtml}</select></div></div></div>`;
+                    // *** CORREÇÃO AQUI: Acessa 'order.profiles.full_name' ***
+                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg"><div class="flex justify-between items-start"><div><p class="font-bold">Pedido #${order.id.substring(0,8)}</p><p class="text-sm text-purple-300">${order.profiles.full_name}</p><p class="text-xs text-gray-400">${new Date(order.created_at).toLocaleString()}</p></div><div class="text-right"><p class="font-bold text-lg">R$ ${order.total_amount.toFixed(2)}</p><select data-order-id="${order.id}" class="status-select bg-gray-700 p-1 rounded-md mt-1">${optionsHtml}</select></div></div></div>`;
                     ordersList.innerHTML += card;
                 });
             }
