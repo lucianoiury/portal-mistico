@@ -37,10 +37,14 @@
             <div id="client-dashboard" class="hidden">
                 <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
                     <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="client-user-name" class="text-purple-400">...</span>!</h2>
-                    <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <p class="text-sm text-gray-400">Email</p>
                             <p id="client-user-email" class="text-lg">...</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400">Sua Função</p>
+                            <p id="client-user-role" class="text-lg capitalize">...</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-400">Créditos de Chat</p>
@@ -48,6 +52,7 @@
                         </div>
                     </div>
                 </div>
+                
                 <div class="mt-12 bg-gray-800/30 p-8 rounded-lg">
                     <h3 class="text-2xl font-cinzel text-center mb-6">Ações Rápidas</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -59,6 +64,18 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Histórico de Pedidos -->
+                <div class="mt-12">
+                    <h3 class="text-2xl font-cinzel mb-6">Meus Pedidos da Loja</h3>
+                    <div id="orders-list" class="space-y-4"></div>
+                </div>
+
+                <!-- Histórico de Consultas -->
+                <div class="mt-12">
+                    <h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3>
+                    <div id="client-conversations-list" class="space-y-4"></div>
+                </div>
             </div>
 
             <!-- ############ PAINEL DO TARÓLOGO ############ -->
@@ -69,9 +86,7 @@
                 </div>
                 <div class="mt-12">
                     <h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3>
-                    <div id="conversations-list" class="space-y-4">
-                        <!-- A lista de conversas será inserida aqui -->
-                    </div>
+                    <div id="reader-conversations-list" class="space-y-4"></div>
                 </div>
             </div>
 
@@ -99,7 +114,6 @@
             
             const user = session.user;
             
-            // Busca o perfil para determinar a função (role)
             const { data: profile, error } = await supabaseClient
                 .from('profiles')
                 .select('full_name, role, chat_credits_minutes')
@@ -120,7 +134,10 @@
             } else {
                 document.getElementById('client-user-name').textContent = profile.full_name;
                 document.getElementById('client-user-email').textContent = user.email;
+                document.getElementById('client-user-role').textContent = profile.role;
                 document.getElementById('client-user-credits').textContent = `${profile.chat_credits_minutes || 0} minutos`;
+                await loadClientOrders(user, supabaseClient);
+                await loadClientConversations(user, supabaseClient);
                 document.getElementById('client-dashboard').classList.remove('hidden');
             }
 
@@ -134,53 +151,60 @@
         });
 
         async function loadTarotReaderConversations(user, client) {
-            const listContainer = document.getElementById('conversations-list');
-            listContainer.innerHTML = ''; // Limpa a lista
-
-            // Busca as conversas E o nome do cliente associado
-            const { data: conversations, error } = await client
-                .from('conversations')
-                .select(`
-                    id,
-                    status,
-                    created_at,
-                    client:client_id (full_name)
-                `)
-                .eq('tarot_reader_id', user.id)
-                .order('created_at', { ascending: false });
+            const listContainer = document.getElementById('reader-conversations-list');
+            listContainer.innerHTML = '';
+            const { data: conversations, error } = await client.from('conversations').select(`id, status, created_at, client:client_id (full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
 
             if (error) {
-                console.error("Erro ao buscar conversas:", error);
                 listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`;
                 return;
             }
-
             if (conversations.length === 0) {
                 listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`;
                 return;
             }
-
             conversations.forEach(convo => {
-                const statusClasses = {
-                    'active': 'text-green-400',
-                    'pending': 'text-yellow-400',
-                    'finished': 'text-gray-500'
-                };
+                const statusClasses = {'active': 'text-green-400','pending': 'text-yellow-400','finished': 'text-gray-500'};
+                const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-colors"><div class="flex justify-between items-center"><div><p class="text-xl font-bold">Consulta com <span class="text-purple-300">${convo.client.full_name || 'Cliente Desconhecido'}</span></p><p class="text-sm text-gray-400">Iniciada em: ${new Date(convo.created_at).toLocaleDateString()}</p></div><div class="text-right"><p class="font-bold capitalize ${statusClasses[convo.status] || 'text-gray-300'}">${convo.status}</p><span class="text-sm text-gray-500">Entrar no Chat →</span></div></div></a>`;
+                listContainer.innerHTML += card;
+            });
+        }
 
-                const card = `
-                    <a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-colors">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="text-xl font-bold">Consulta com <span class="text-purple-300">${convo.client.full_name || 'Cliente Desconhecido'}</span></p>
-                                <p class="text-sm text-gray-400">Iniciada em: ${new Date(convo.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold capitalize ${statusClasses[convo.status] || 'text-gray-300'}">${convo.status}</p>
-                                <span class="text-sm text-gray-500">Entrar no Chat →</span>
-                            </div>
-                        </div>
-                    </a>
-                `;
+        async function loadClientOrders(user, client) {
+            const listContainer = document.getElementById('orders-list');
+            listContainer.innerHTML = '';
+            const { data: orders, error } = await client.from('orders').select(`id, created_at, total_amount, status`).eq('user_id', user.id).order('created_at', { ascending: false });
+
+            if (error) {
+                listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar o seu histórico de pedidos.</p>`;
+                return;
+            }
+            if (orders.length === 0) {
+                listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não fez nenhum pedido na loja.</div>`;
+                return;
+            }
+            orders.forEach(order => {
+                // *** ALTERAÇÃO AQUI: O div é agora um link 'a' ***
+                const card = `<a href="pedido.html?id=${order.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50 transition-colors"><div><p class="font-bold">Pedido #${order.id.substring(0, 8)}</p><p class="text-sm text-gray-400">${new Date(order.created_at).toLocaleDateString()}</p></div><div><p class="font-bold text-lg text-purple-300">R$ ${order.total_amount.toFixed(2)}</p><p class="text-sm text-right capitalize">${order.status}</p></div></a>`;
+                listContainer.innerHTML += card;
+            });
+        }
+
+        async function loadClientConversations(user, client) {
+            const listContainer = document.getElementById('client-conversations-list');
+            listContainer.innerHTML = '';
+            const { data: conversations, error } = await client.from('conversations').select(`id, status, created_at, tarot_reader:tarot_reader_id (full_name)`).eq('client_id', user.id).order('created_at', { ascending: false });
+
+            if (error) {
+                listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar o seu histórico de consultas.</p>`;
+                return;
+            }
+            if (conversations.length === 0) {
+                listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não realizou nenhuma consulta.</div>`;
+                return;
+            }
+            conversations.forEach(convo => {
+                 const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50 transition-colors"><div><p class="font-bold">Consulta com <span class="text-purple-300">${convo.tarot_reader.full_name}</span></p><p class="text-sm text-gray-400">${new Date(convo.created_at).toLocaleDateString()}</p></div><p class="font-bold capitalize">${convo.status}</p></a>`;
                 listContainer.innerHTML += card;
             });
         }
