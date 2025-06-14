@@ -134,10 +134,9 @@
             // Utilizadores
             const usersList = document.getElementById('users-list');
             const userForm = document.getElementById('user-form');
-            const userFormTitle = document.getElementById('user-form-title');
             const userEditName = document.getElementById('user-edit-name');
             const userClearBtn = document.getElementById('user-clear-btn');
-            
+
             // --- LÓGICA DAS ABAS ---
             function switchTab(activeTab) {
                 Object.keys(tabs).forEach(key => {
@@ -154,18 +153,96 @@
 
 
             // --- LÓGICA GERAL ---
-            async function checkAdminStatus() { /* ...código mantido... */ }
+            async function checkAdminStatus() {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                const { data: profile, error } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
+                if (error || profile.role !== 'admin') {
+                    alert("Acesso negado. Esta área é restrita a administradores.");
+                    window.location.href = 'index.html';
+                    return;
+                }
+                loader.style.display = 'none';
+                adminPanel.classList.remove('hidden');
+            }
             
             // --- LÓGICA DE PRODUTOS ---
-            async function loadProducts() { /* ...código mantido... */ }
-            productForm.addEventListener('submit', async (e) => { /* ...código mantido... */ });
-            function resetProductForm() { /* ...código mantido... */ }
+            async function loadProducts() {
+                productsList.innerHTML = '<p>A carregar produtos...</p>';
+                const { data, error } = await supabaseClient.from('products').select('*').order('name', { ascending: true });
+                if (error) { productsList.innerHTML = `<p class="text-red-400">Erro ao carregar produtos.</p>`; return; }
+                productsList.innerHTML = '';
+                data.forEach(p => {
+                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg flex items-center justify-between"><div class="flex items-center space-x-4"><img src="${p.image_url}" class="w-16 h-16 object-cover rounded-md"><div><p class="font-bold">${p.name}</p><p class="text-sm text-gray-400">R$ ${p.price.toFixed(2)}</p></div></div><div class="space-x-2"><button data-id="${p.id}" class="edit-btn bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded-md hover:bg-yellow-400">Editar</button><button data-id="${p.id}" data-name="${p.name}" class="delete-btn bg-red-600 text-white font-bold py-1 px-3 rounded-md hover:bg-red-500">Apagar</button></div></div>`;
+                    productsList.innerHTML += card;
+                });
+            }
+            
+            productForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const productData = { name: e.target.name.value, description: e.target.description.value, price: parseFloat(e.target.price.value), image_url: e.target.image_url.value };
+                let error;
+                if (editingProductId) {
+                    const { error: updateError } = await supabaseClient.from('products').update(productData).eq('id', editingProductId);
+                    error = updateError;
+                } else {
+                    const { error: insertError } = await supabaseClient.from('products').insert([productData]);
+                    error = insertError;
+                }
+                if (error) { alert('Erro ao guardar: ' + error.message); } else { resetProductForm(); await loadProducts(); }
+            });
+            
+            function resetProductForm() {
+                productForm.reset();
+                editingProductId = null;
+                formTitle.textContent = 'Adicionar Novo Produto';
+                submitBtn.textContent = 'Adicionar';
+                submitBtn.classList.replace('bg-yellow-500', 'bg-green-600');
+            }
+            
             clearBtn.addEventListener('click', resetProductForm);
-            productsList.addEventListener('click', async (e) => { /* ...código mantido... */ });
+            
+            productsList.addEventListener('click', async (e) => {
+                const target = e.target;
+                const id = target.getAttribute('data-id');
+                if (target.classList.contains('edit-btn')) {
+                    const { data: p, error } = await supabaseClient.from('products').select('*').eq('id', id).single();
+                    if (error) { alert('Erro ao buscar produto.'); return; }
+                    productForm.name.value = p.name; productForm.description.value = p.description; productForm.price.value = p.price; productForm.image_url.value = p.image_url;
+                    editingProductId = p.id; formTitle.textContent = 'A Editar Produto'; submitBtn.textContent = 'Guardar'; submitBtn.classList.replace('bg-green-600', 'bg-yellow-500'); window.scrollTo(0, 0);
+                }
+                if (target.classList.contains('delete-btn')) {
+                    if (confirm(`Apagar o produto "${target.getAttribute('data-name')}"?`)) {
+                        const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                        if(error) { alert("Erro ao apagar: " + error.message); } else { await loadProducts(); }
+                    }
+                }
+            });
 
             // --- LÓGICA DE PEDIDOS ---
-            async function loadOrders() { /* ...código mantido... */ }
-            ordersList.addEventListener('change', async (e) => { /* ...código mantido... */ });
+            async function loadOrders() {
+                ordersList.innerHTML = '<p>A carregar pedidos...</p>';
+                const { data, error } = await supabaseClient.from('orders').select('*, profiles(full_name)').order('created_at', { ascending: false });
+                if (error) { ordersList.innerHTML = `<p class="text-red-400">Erro ao carregar pedidos: ${error.message}</p>`; return; }
+                ordersList.innerHTML = '';
+                data.forEach(order => {
+                    const statusOptions = ['processando', 'pago', 'enviado', 'cancelado'];
+                    const optionsHtml = statusOptions.map(s => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('');
+                    const card = `<div class="bg-gray-800/50 p-4 rounded-lg"><div class="flex justify-between items-start"><div><p class="font-bold">Pedido #${order.id.substring(0,8)}</p><p class="text-sm text-purple-300">${order.profiles.full_name}</p><p class="text-xs text-gray-400">${new Date(order.created_at).toLocaleString()}</p></div><div class="text-right"><p class="font-bold text-lg">R$ ${order.total_amount.toFixed(2)}</p><select data-order-id="${order.id}" class="status-select bg-gray-700 p-1 rounded-md mt-1">${optionsHtml}</select></div></div></div>`;
+                    ordersList.innerHTML += card;
+                });
+            }
+            ordersList.addEventListener('change', async (e) => {
+                if(e.target.classList.contains('status-select')) {
+                    const orderId = e.target.getAttribute('data-order-id');
+                    const newStatus = e.target.value;
+                    const { error } = await supabaseClient.from('orders').update({ status: newStatus }).eq('id', orderId);
+                    if (error) { alert("Erro ao atualizar o estado: " + error.message); loadOrders(); }
+                }
+            });
 
             // --- LÓGICA DE UTILIZADORES ---
             async function loadUsers() {
@@ -175,7 +252,7 @@
                 usersList.innerHTML = '';
                 data.forEach(user => {
                     const card = `<div class="bg-gray-800/50 p-4 rounded-lg flex items-center justify-between"><div class="space-y-1">
-                        <p class="font-bold">${user.full_name} <span class="text-xs font-mono text-gray-500">${user.id.substring(0,8)}</span></p>
+                        <p class="font-bold">${user.full_name}</p>
                         <p class="text-sm text-gray-400">Função: <span class="font-semibold text-purple-300">${user.role}</span> | Créditos: <span class="font-semibold text-yellow-300">${user.chat_credits_minutes}</span></p>
                         </div><button data-id="${user.id}" class="user-edit-btn bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded-md hover:bg-yellow-400">Editar</button></div>`;
                     usersList.innerHTML += card;
@@ -227,10 +304,6 @@
             // Esconde o formulário de utilizador por defeito
             userForm.classList.add('hidden');
         });
-    </script>
-    <!-- Script de lógica de produtos e pedidos omitido para brevidade, mas deve ser colado aqui -->
-    <script>
-        // ... (Cole aqui toda a lógica de JS da resposta anterior, mantendo a estrutura)
     </script>
 </body>
 </html>
