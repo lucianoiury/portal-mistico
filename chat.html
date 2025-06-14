@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sessão de Chat - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        #messages-container { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
+                Portal Místico
+            </a>
+            <div id="timer" class="text-xl font-bold text-yellow-400">
+                Tempo Restante: --:--
+            </div>
+            <div>
+                <a href="dashboard.html" class="hover:text-purple-300 transition-colors">Sair do Chat</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 h-[calc(100vh-80px)] flex flex-col">
+        <div id="loader" class="text-center py-10 flex-grow flex items-center justify-center">
+            <div>
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+                <p class="mt-4">A iniciar a sessão de chat...</p>
+            </div>
+        </div>
+
+        <div id="chat-interface" class="hidden flex-grow flex flex-col bg-gray-800/50 rounded-lg overflow-hidden">
+            <!-- Área de Mensagens -->
+            <div id="messages-container" class="flex-grow p-6 space-y-4 overflow-y-auto">
+                <!-- As mensagens serão inseridas aqui -->
+            </div>
+            <!-- Formulário de Envio -->
+            <form id="message-form" class="p-4 bg-gray-900/50 border-t border-purple-900">
+                <div class="flex items-center">
+                    <input type="text" id="message-input" placeholder="Digite a sua mensagem..." class="w-full bg-gray-700 p-3 rounded-l-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500" autocomplete="off">
+                    <button type="submit" class="bg-purple-600 px-6 py-3 rounded-r-lg hover:bg-purple-700 disabled:bg-gray-500">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="auth-config.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const currentUser = session.user;
+            const urlParams = new URLSearchParams(window.location.search);
+            const conversationId = urlParams.get('id');
+
+            const loader = document.getElementById('loader');
+            const chatInterface = document.getElementById('chat-interface');
+            const messagesContainer = document.getElementById('messages-container');
+            const messageForm = document.getElementById('message-form');
+            const messageInput = document.getElementById('message-input');
+            const timerEl = document.getElementById('timer');
+
+            let chatCredits = 0;
+            let timerInterval;
+
+            if (!conversationId) {
+                loader.innerHTML = '<p class="text-red-400">ID da conversa não encontrado.</p>';
+                return;
+            }
+
+            async function initializeChat() {
+                // 1. Validar a conversa e buscar o ID do cliente
+                const { data: conversation, error: convError } = await supabaseClient
+                    .from('conversations')
+                    .select('client_id')
+                    .eq('id', conversationId)
+                    .or(`client_id.eq.${currentUser.id},tarot_reader_id.eq.${currentUser.id}`) // Garante que o utilizador pertence à conversa
+                    .single();
+                
+                if (convError || !conversation) {
+                    loader.innerHTML = '<p class="text-red-400">Acesso negado a esta conversa.</p>';
+                    return;
+                }
+
+                // 2. Buscar os créditos do cliente
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('chat_credits_minutes')
+                    .eq('id', conversation.client_id)
+                    .single();
+                
+                if(profileError || !profile) {
+                     loader.innerHTML = '<p class="text-red-400">Não foi possível carregar os dados do cliente.</p>';
+                    return;
+                }
+                chatCredits = profile.chat_credits_minutes;
+
+                // 3. Carregar o histórico de mensagens
+                await loadMessages();
+                
+                // 4. Iniciar a subscrição em tempo real para novas mensagens
+                listenForNewMessages();
+
+                // 5. Iniciar o temporizador
+                startTimer();
+
+                loader.style.display = 'none';
+                chatInterface.classList.remove('hidden');
+            }
+            
+            async function loadMessages() {
+                const { data: messages, error } = await supabaseClient
+                    .from('messages')
+                    .select('*, profiles(full_name)')
+                    .eq('conversation_id', conversationId)
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    console.error("Erro ao carregar mensagens:", error);
+                    return;
+                }
+
+                messages.forEach(renderMessage);
+                scrollToBottom();
+            }
+
+            function renderMessage(message) {
+                const isSentByUser = message.sender_id === currentUser.id;
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex ${isSentByUser ? 'justify-end' : 'justify-start'}`;
+                
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg ${isSentByUser ? 'bg-purple-800' : 'bg-gray-700'}">
+                        <p>${message.content}</p>
+                        <p class="text-xs text-gray-400 mt-1 text-right">${new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                `;
+                messagesContainer.appendChild(messageDiv);
+            }
+
+            function scrollToBottom() {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            function listenForNewMessages() {
+                supabaseClient
+                    .channel(`messages_conv_${conversationId}`)
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
+                        renderMessage(payload.new);
+                        scrollToBottom();
+                    })
+                    .subscribe();
+            }
+
+            messageForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const content = messageInput.value.trim();
+                if (content === '') return;
+
+                messageInput.value = '';
+                
+                await supabaseClient
+                    .from('messages')
+                    .insert({
+                        conversation_id: conversationId,
+                        sender_id: currentUser.id,
+                        content: content
+                    });
+            });
+
+            function startTimer() {
+                let timeLeft = chatCredits * 60; // Converte minutos para segundos
+                
+                timerInterval = setInterval(async () => {
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerEl.textContent = "Tempo Esgotado";
+                        messageInput.disabled = true;
+                        messageInput.placeholder = "Seus créditos acabaram.";
+                        messageForm.querySelector('button').disabled = true;
+                        // Atualiza o estado da conversa para "terminada"
+                        await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                        return;
+                    }
+                    
+                    timeLeft--;
+                    
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    timerEl.textContent = `Tempo: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    
+                    // A cada minuto completo, debita um crédito no Supabase
+                    if (timeLeft % 60 === 0) {
+                        chatCredits--;
+                        await supabaseClient
+                            .from('profiles')
+                            .update({ chat_credits_minutes: chatCredits })
+                            .eq('id', currentUser.id);
+                    }
+                }, 1000);
+            }
+
+            initializeChat();
+        });
+    </script>
+</body>
+</html>
