@@ -20,7 +20,7 @@
     <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 text-center p-4">
         <div>
             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-            <p id="loader-message" class="mt-4 text-purple-200">A carregar os seus dados...</p>
+            <p id="loader-message" class="mt-4 text-purple-200">A carregar o seu painel...</p>
         </div>
     </div>
 
@@ -33,37 +33,48 @@
         </header>
 
         <main>
-            <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
-                <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="user-name" class="text-purple-400">...</span>!</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <p class="text-sm text-gray-400">Email</p>
-                        <p id="user-email" class="text-lg">...</p>
+            <!-- ############ PAINEL DO CLIENTE ############ -->
+            <div id="client-dashboard" class="hidden">
+                <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
+                    <h2 class="text-2xl font-bold mb-6">Bem-vindo(a), <span id="client-user-name" class="text-purple-400">...</span>!</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-400">Email</p>
+                            <p id="client-user-email" class="text-lg">...</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400">Créditos de Chat</p>
+                            <p id="client-user-credits" class="text-lg">-- minutos</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Sua Função</p>
-                        <p id="user-role" class="text-lg capitalize">...</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Créditos de Chat</p>
-                        <p id="user-credits" class="text-lg">-- minutos</p>
+                </div>
+                <div class="mt-12 bg-gray-800/30 p-8 rounded-lg">
+                    <h3 class="text-2xl font-cinzel text-center mb-6">Ações Rápidas</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="tarologos.html" class="block text-center bg-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-purple-700 transition-colors text-lg">
+                            Consultar Tarólogos
+                        </a>
+                        <a href="creditos.html" class="block text-center bg-yellow-500 text-gray-900 font-bold py-4 px-6 rounded-lg hover:bg-yellow-400 transition-colors text-lg">
+                            Comprar Créditos
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Nova Secção de Ações Rápidas -->
-            <div class="mt-12 bg-gray-800/30 p-8 rounded-lg">
-                <h3 class="text-2xl font-cinzel text-center mb-6">Ações Rápidas</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <a href="tarologos.html" class="block text-center bg-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-purple-700 transition-colors text-lg">
-                        Consultar Tarólogos
-                    </a>
-                    <a href="creditos.html" class="block text-center bg-yellow-500 text-gray-900 font-bold py-4 px-6 rounded-lg hover:bg-yellow-400 transition-colors text-lg">
-                        Comprar Créditos
-                    </a>
+            <!-- ############ PAINEL DO TARÓLOGO ############ -->
+            <div id="tarot-reader-dashboard" class="hidden">
+                <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
+                     <h2 class="text-2xl font-bold mb-6">Painel do Tarólogo: <span id="reader-user-name" class="text-purple-400">...</span></h2>
+                     <p>Aqui estão as suas consultas agendadas e em andamento.</p>
+                </div>
+                <div class="mt-12">
+                    <h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3>
+                    <div id="conversations-list" class="space-y-4">
+                        <!-- A lista de conversas será inserida aqui -->
+                    </div>
                 </div>
             </div>
+
         </main>
     </div>
 
@@ -88,17 +99,29 @@
             
             const user = session.user;
             
+            // Busca o perfil para determinar a função (role)
             const { data: profile, error } = await supabaseClient
                 .from('profiles')
                 .select('full_name, role, chat_credits_minutes')
                 .eq('id', user.id)
                 .single();
 
-            if (profile) {
-                document.getElementById('user-name').textContent = profile.full_name;
-                document.getElementById('user-email').textContent = user.email;
-                document.getElementById('user-role').textContent = profile.role;
-                document.getElementById('user-credits').textContent = `${profile.chat_credits_minutes || 0} minutos`;
+            if (error || !profile) {
+                console.error("Não foi possível carregar o perfil do utilizador.");
+                loader.textContent = "Erro ao carregar o seu perfil. Por favor, tente novamente.";
+                return;
+            }
+
+            // Mostra o painel correto com base na função
+            if (profile.role === 'tarologo') {
+                document.getElementById('reader-user-name').textContent = profile.full_name;
+                await loadTarotReaderConversations(user, supabaseClient);
+                document.getElementById('tarot-reader-dashboard').classList.remove('hidden');
+            } else {
+                document.getElementById('client-user-name').textContent = profile.full_name;
+                document.getElementById('client-user-email').textContent = user.email;
+                document.getElementById('client-user-credits').textContent = `${profile.chat_credits_minutes || 0} minutos`;
+                document.getElementById('client-dashboard').classList.remove('hidden');
             }
 
             loader.style.display = 'none';
@@ -109,6 +132,58 @@
                 window.location.href = 'index.html';
             });
         });
+
+        async function loadTarotReaderConversations(user, client) {
+            const listContainer = document.getElementById('conversations-list');
+            listContainer.innerHTML = ''; // Limpa a lista
+
+            // Busca as conversas E o nome do cliente associado
+            const { data: conversations, error } = await client
+                .from('conversations')
+                .select(`
+                    id,
+                    status,
+                    created_at,
+                    client:client_id (full_name)
+                `)
+                .eq('tarot_reader_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Erro ao buscar conversas:", error);
+                listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`;
+                return;
+            }
+
+            if (conversations.length === 0) {
+                listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`;
+                return;
+            }
+
+            conversations.forEach(convo => {
+                const statusClasses = {
+                    'active': 'text-green-400',
+                    'pending': 'text-yellow-400',
+                    'finished': 'text-gray-500'
+                };
+
+                const card = `
+                    <a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-colors">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-xl font-bold">Consulta com <span class="text-purple-300">${convo.client.full_name || 'Cliente Desconhecido'}</span></p>
+                                <p class="text-sm text-gray-400">Iniciada em: ${new Date(convo.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold capitalize ${statusClasses[convo.status] || 'text-gray-300'}">${convo.status}</p>
+                                <span class="text-sm text-gray-500">Entrar no Chat →</span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+                listContainer.innerHTML += card;
+            });
+        }
     </script>
 </body>
 </html>
