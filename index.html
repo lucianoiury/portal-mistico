@@ -13,7 +13,7 @@
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #111827; }
-        h1, h2, h3, .font-cinzel { font-family: 'Cinzel', serif; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
         .glow-on-hover:hover { box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.4); }
     </style>
 </head>
@@ -22,15 +22,37 @@
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">Clã Michetti</a>
+            
+            <!-- Menu para Desktop -->
             <div class="hidden md:flex items-center space-x-6">
                 <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
                 <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
             </div>
-            <div id="auth-buttons" class="flex items-center space-x-4">
-                 <a href="login.html" class="hidden sm:block bg-transparent border border-purple-400 text-purple-300 px-4 py-2 rounded-lg hover:bg-purple-400 hover:text-gray-900">Login</a>
-                <a href="cadastro.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Cadastre-se</a>
+
+            <!-- Botões de Auth (Visitante ou Utilizador) -->
+            <div id="auth-buttons-container" class="hidden md:flex items-center space-x-4">
+                 <a href="login.html" id="login-btn" class="hidden sm:block bg-transparent border border-purple-400 text-purple-300 px-4 py-2 rounded-lg hover:bg-purple-400 hover:text-gray-900">Login</a>
+                <a href="cadastro.html" id="signup-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Cadastre-se</a>
+                <a href="dashboard.html" id="dashboard-btn" class="hidden bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
+            </div>
+
+            <!-- Botão do Menu Mobile (Hambúrguer) -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-button" class="text-gray-200 hover:text-white focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
             </div>
         </nav>
+        <!-- Menu Mobile (Dropdown) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-gray-900/95 pb-4">
+            <a href="loja.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Loja</a>
+            <a href="tarologos.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Tarólogos</a>
+            <div id="mobile-auth-links" class="border-t border-purple-900 mt-2 pt-2">
+                 <a href="login.html" id="mobile-login-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Login</a>
+                 <a href="cadastro.html" id="mobile-signup-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Cadastre-se</a>
+                 <a href="dashboard.html" id="mobile-dashboard-btn" class="hidden block py-2 px-6 text-sm hover:bg-gray-700/50">Meu Painel</a>
+            </div>
+        </div>
     </header>
 
     <main>
@@ -54,39 +76,56 @@
     </main>
 
     <footer class="bg-gray-900 border-t border-purple-900/50">
-        <div class="container mx-auto px-6 py-8 text-center text-gray-400">
-            <p>&copy; 2025 Clã Michetti. Todos os direitos reservados.</p>
-        </div>
+        <div class="container mx-auto px-6 py-8 text-center text-gray-400"><p>&copy; 2025 Clã Michetti. Todos os direitos reservados.</p></div>
     </footer>
 
     <script src="auth-config.js"></script>
     <script>
-        window.addEventListener('load', async () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
-            const authButtonsContainer = document.getElementById('auth-buttons');
+            
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            const loginBtn = document.getElementById('login-btn');
+            const signupBtn = document.getElementById('signup-btn');
+            const dashboardBtn = document.getElementById('dashboard-btn');
+            const mobileLoginBtn = document.getElementById('mobile-login-btn');
+            const mobileSignupBtn = document.getElementById('mobile-signup-btn');
+            const mobileDashboardBtn = document.getElementById('mobile-dashboard-btn');
+
             if (session) {
-                authButtonsContainer.innerHTML = `<a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>`;
+                loginBtn.classList.add('hidden');
+                signupBtn.classList.add('hidden');
+                dashboardBtn.classList.remove('hidden');
+                mobileLoginBtn.classList.add('hidden');
+                mobileSignupBtn.classList.add('hidden');
+                mobileDashboardBtn.classList.remove('hidden');
+            } else {
+                loginBtn.classList.remove('hidden');
+                signupBtn.classList.remove('hidden');
+                dashboardBtn.classList.add('hidden');
+                mobileLoginBtn.classList.remove('hidden');
+                mobileSignupBtn.classList.remove('hidden');
+                mobileDashboardBtn.classList.add('hidden');
             }
 
+            // Lógica para carregar os produtos
             const productGrid = document.getElementById('product-grid');
             const loader = document.getElementById('loader');
-            
-            // **CORREÇÃO AQUI:** Removida a ordenação por 'created_at' que não existe.
             const { data: products, error } = await supabaseClient.from('products').select('*').limit(4);
-
             loader.style.display = 'none';
-            if (error) {
-                productGrid.innerHTML = `<p class="text-center col-span-full text-red-400">Não foi possível carregar os produtos.</p>`;
-            } else if (products && products.length > 0) {
+            if (error) { productGrid.innerHTML = `<p class="col-span-full text-center text-red-400">Não foi possível carregar os produtos.</p>`; }
+            else if (products.length > 0) {
                 products.forEach(product => {
-                    const price = typeof product.price === 'number' ? product.price : 0;
-                    const card = `<a href="produto.html?id=${product.id}" class="glow-on-hover bg-gray-800/50 rounded-lg overflow-hidden border border-purple-900/30 flex flex-col transition"><img src="${product.image_url || 'https://placehold.co/400x300/111827/FFFFFF?text=Sem+Imagem'}" alt="${product.name}" class="w-full h-56 object-cover"><div class="p-6 flex flex-col flex-grow"><h3 class="text-xl font-bold text-purple-200 font-cinzel">${product.name}</h3><p class="mt-2 text-gray-400 flex-grow">${product.description}</p><div class="mt-4 text-right"><span class="text-2xl font-bold text-white">R$ ${price.toFixed(2).replace('.', ',')}</span></div></div></a>`;
+                    const card = `<a href="produto.html?id=${product.id}" class="glow-on-hover bg-gray-800/50 rounded-lg overflow-hidden border border-purple-900/30 flex flex-col transition"><img src="${product.image_url || 'https://placehold.co/400x300/111827/FFFFFF?text=Sem+Imagem'}" alt="${product.name}" class="w-full h-56 object-cover"><div class="p-6 flex flex-col flex-grow"><h3 class="text-xl font-bold text-purple-200 font-cinzel">${product.name}</h3><p class="mt-2 text-gray-400 flex-grow">${product.description}</p><div class="mt-4 text-right"><span class="text-2xl font-bold text-white">R$ ${product.price.toFixed(2).replace('.', ',')}</span></div></div></a>`;
                     productGrid.innerHTML += card;
                 });
-            } else {
-                 productGrid.innerHTML = `<p class="text-center col-span-full">Nenhum produto em destaque no momento.</p>`;
-            }
+            } else { productGrid.innerHTML = `<p class="col-span-full text-center">Nenhum produto em destaque.</p>`; }
             productGrid.style.opacity = '1';
         });
     </script>
