@@ -12,25 +12,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827; /* bg-gray-900 */
-        }
-        h1, h2, h3, .font-cinzel {
-            font-family: 'Cinzel', serif;
-        }
-        .glow-on-hover:hover {
-            box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.4); /* purple-400 glow */
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        h1, h2, h3, .font-cinzel { font-family: 'Cinzel', serif; }
+        .glow-on-hover:hover { box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.4); }
     </style>
 </head>
 <body class="text-gray-200">
 
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
-                Clã Michetti
-            </a>
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">Clã Michetti</a>
             <div class="hidden md:flex items-center space-x-6">
                 <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
                 <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
@@ -57,9 +48,7 @@
                     <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
                     <p class="mt-4">A buscar os artefatos...</p>
                 </div>
-                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 opacity-0 transition-opacity duration-500">
-                    <!-- Produtos reais serão carregados aqui -->
-                </div>
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 opacity-0 transition-opacity duration-500"></div>
             </div>
         </section>
     </main>
@@ -83,7 +72,8 @@
             const productGrid = document.getElementById('product-grid');
             const loader = document.getElementById('loader');
             
-            const { data: products, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(4);
+            // **CORREÇÃO AQUI:** Removida a ordenação por 'created_at' que não existe.
+            const { data: products, error } = await supabaseClient.from('products').select('*').limit(4);
 
             loader.style.display = 'none';
             if (error) {
