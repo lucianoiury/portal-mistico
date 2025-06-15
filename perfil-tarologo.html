@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Tarólogo - Portal Místico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Portal Místico</a>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
+                <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" class="container mx-auto p-8">
+        <div id="loader" class="text-center py-10">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            <p class="mt-4">A carregar perfil do tarólogo...</p>
+        </div>
+
+        <div id="profile-container" class="hidden">
+            <div class="md:grid md:grid-cols-3 md:gap-8">
+                <!-- Coluna da Esquerda: Foto e Botão -->
+                <div class="md:col-span-1 text-center">
+                    <img id="profile-avatar" src="" alt="[Foto do Tarólogo]" class="w-48 h-48 rounded-full mx-auto mb-6 border-4 border-purple-800 object-cover">
+                    <button id="start-chat-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Iniciar Consulta</button>
+                </div>
+
+                <!-- Coluna da Direita: Detalhes -->
+                <div class="md:col-span-2 mt-8 md:mt-0">
+                    <h1 id="profile-name" class="text-4xl font-cinzel text-purple-300"></h1>
+                    <div id="profile-specialties" class="mt-4 flex flex-wrap gap-2"></div>
+                    <p id="profile-bio" class="mt-6 text-lg text-gray-300 whitespace-pre-wrap"></p>
+                </div>
+            </div>
+             <!-- Futura Secção de Avaliações -->
+            <div class="mt-20">
+                <h2 class="text-3xl font-cinzel text-center text-purple-300 mb-12">Avaliações de Clientes</h2>
+                <div class="text-center text-gray-400">(Funcionalidade de avaliações para tarólogos em breve)</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="auth-config.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = 'login.html'; return; }
+            
+            const currentUser = session.user;
+            const urlParams = new URLSearchParams(window.location.search);
+            const readerId = urlParams.get('id');
+
+            const loader = document.getElementById('loader');
+            const container = document.getElementById('profile-container');
+
+            if (!readerId) {
+                loader.innerHTML = '<p class="text-red-400 text-center">Tarólogo não especificado.</p>';
+                return;
+            }
+
+            async function loadProfile() {
+                const { data: reader, error } = await supabaseClient.from('profiles').select('*').eq('id', readerId).single();
+                
+                loader.style.display = 'none';
+                if (error || !reader) {
+                    container.innerHTML = '<p class="text-red-400 text-center">Não foi possível carregar o perfil deste tarólogo.</p>';
+                    container.classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('profile-avatar').src = reader.avatar_url || `https://placehold.co/200x200/7b2cbf/FFFFFF?text=${reader.full_name.charAt(0)}`;
+                document.getElementById('profile-name').textContent = reader.full_name;
+                document.getElementById('profile-bio').textContent = reader.bio || 'Este tarólogo ainda não adicionou uma biografia.';
+                
+                const specialtiesContainer = document.getElementById('profile-specialties');
+                if (reader.specialties && reader.specialties.length > 0) {
+                    reader.specialties.forEach(s => {
+                        specialtiesContainer.innerHTML += `<span class="bg-purple-900/50 text-purple-300 text-sm font-medium mr-2 px-3 py-1 rounded-full">${s}</span>`;
+                    });
+                } else {
+                    specialtiesContainer.innerHTML = `<span class="text-sm text-gray-500">Nenhuma especialidade listada.</span>`;
+                }
+                
+                container.classList.remove('hidden');
+            }
+
+            document.getElementById('start-chat-btn').addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                e.target.textContent = "A verificar...";
+                
+                const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('chat_credits_minutes').eq('id', currentUser.id).single();
+                if (profileError || !profile || profile.chat_credits_minutes < 1) {
+                    alert("Você não tem créditos de chat suficientes.");
+                    window.location.href = 'creditos.html';
+                    return;
+                }
+
+                const { data: conversation, error: convError } = await supabaseClient.from('conversations').insert({ client_id: currentUser.id, tarot_reader_id: readerId, status: 'active' }).select().single();
+                if (convError) {
+                    alert("Erro ao iniciar a conversa.");
+                    e.target.disabled = false;
+                    e.target.textContent = "Iniciar Consulta";
+                    return;
+                }
+                window.location.href = `chat.html?id=${conversation.id}`;
+            });
+
+            await loadProfile();
+        });
+    </script>
+</body>
+</html>

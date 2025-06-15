@@ -18,11 +18,13 @@
 
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
-                Portal Místico
-            </a>
-            <div>
-                <a href="dashboard.html" class="hover:text-purple-300 transition-colors">Meu Painel</a>
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Portal Místico</a>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
+                <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
             </div>
         </nav>
     </header>
@@ -59,10 +61,9 @@
             const container = document.getElementById('tarot-readers-container');
 
             async function loadTarotReaders() {
-                // Busca todos os perfis que têm a função 'tarologo'
                 const { data: readers, error } = await supabaseClient
                     .from('profiles')
-                    .select('id, full_name')
+                    .select('id, full_name, avatar_url, specialties')
                     .eq('role', 'tarologo');
 
                 loader.style.display = 'none';
@@ -77,73 +78,26 @@
                     container.innerHTML = `<p class="text-gray-400 text-center col-span-full">Nenhum tarólogo disponível no momento.</p>`;
                 } else {
                      readers.forEach(reader => {
-                        // Não mostra o próprio utilizador na lista se ele for um tarólogo
                         if(reader.id === currentUser.id) return;
 
+                        const specialtiesHtml = (reader.specialties || [])
+                            .map(s => `<span class="bg-purple-900/50 text-purple-300 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">${s}</span>`)
+                            .join('');
+
                         const readerCard = `
-                            <div class="bg-gray-800/50 p-6 rounded-lg border border-purple-900 text-center">
-                                <img src="https://placehold.co/150x150/7b2cbf/FFFFFF?text=${reader.full_name.charAt(0)}" alt="[Foto de ${reader.full_name}]" class="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-purple-800">
+                            <a href="perfil-tarologo.html?id=${reader.id}" class="block bg-gray-800/50 p-6 rounded-lg border border-transparent hover:border-purple-500 transition-colors text-center">
+                                <img src="${reader.avatar_url || `https://placehold.co/150x150/7b2cbf/FFFFFF?text=${reader.full_name.charAt(0)}`}" alt="[Foto de ${reader.full_name}]" class="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-purple-800">
                                 <h2 class="text-2xl font-bold text-purple-300">${reader.full_name}</h2>
-                                <p class="text-gray-400 mt-2">Tarólogo(a) Especialista</p>
-                                <button data-reader-id="${reader.id}" class="start-chat-btn mt-6 bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 w-full">
-                                    Iniciar Consulta
-                                </button>
-                            </div>
+                                <div class="mt-2 h-10">${specialtiesHtml}</div>
+                                <span class="mt-4 inline-block bg-gray-700 text-white font-bold py-2 px-6 rounded-lg w-full">Ver Perfil</span>
+                            </a>
                         `;
                         container.innerHTML += readerCard;
                     });
                 }
                 
                 container.classList.remove('hidden');
-                addEventListeners();
             }
-
-            function addEventListeners() {
-                document.querySelectorAll('.start-chat-btn').forEach(button => {
-                    button.addEventListener('click', startChat);
-                });
-            }
-
-            async function startChat(e) {
-                const readerId = e.target.getAttribute('data-reader-id');
-                e.target.disabled = true;
-                e.target.textContent = "A verificar...";
-
-                // 1. Verificar se o cliente tem créditos
-                const { data: profile, error: profileError } = await supabaseClient
-                    .from('profiles')
-                    .select('chat_credits_minutes')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (profileError || !profile || profile.chat_credits_minutes < 1) {
-                    alert("Você não tem créditos de chat suficientes. Por favor, compre mais minutos para continuar.");
-                    window.location.href = 'creditos.html';
-                    return;
-                }
-
-                // 2. Criar a nova conversa
-                const { data: conversation, error: conversationError } = await supabaseClient
-                    .from('conversations')
-                    .insert({
-                        client_id: currentUser.id,
-                        tarot_reader_id: readerId,
-                        status: 'active' // Inicia a conversa como ativa
-                    })
-                    .select()
-                    .single();
-                
-                if (conversationError) {
-                    alert("Erro ao iniciar a conversa. Tente novamente.");
-                    e.target.disabled = false;
-                    e.target.textContent = "Iniciar Consulta";
-                    return;
-                }
-
-                // 3. Redirecionar para a página do chat, passando o ID da conversa
-                window.location.href = `chat.html?id=${conversation.id}`;
-            }
-
             loadTarotReaders();
         });
     </script>
