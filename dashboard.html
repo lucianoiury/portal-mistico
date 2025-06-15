@@ -104,7 +104,11 @@
                     <div class="lg:col-span-1">
                         <form id="profile-edit-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
                             <h2 class="text-2xl font-bold mb-4 text-purple-300">Editar Meu Perfil Público</h2>
-                            <div><label for="avatar_url" class="block mb-1 text-sm">URL da sua Foto de Perfil</label><input type="url" id="avatar_url" value="${profile.avatar_url || ''}" class="w-full bg-gray-700 p-2 rounded text-white"></div>
+                            <input type="hidden" id="current-avatar-url" value="${profile.avatar_url || ''}">
+                            <div>
+                                <label for="avatar-upload" class="block mb-1 text-sm">Foto de Perfil</label>
+                                <input type="file" id="avatar-upload" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200">
+                            </div>
                             <div><label for="bio" class="block mb-1 text-sm">Sua Biografia</label><textarea id="bio" rows="5" class="w-full bg-gray-700 p-2 rounded text-white">${profile.bio || ''}</textarea></div>
                             <div><label for="specialties" class="block mb-1 text-sm">Especialidades (separadas por vírgula)</label><input type="text" id="specialties" value="${(profile.specialties || []).join(', ')}" class="w-full bg-gray-700 p-2 rounded text-white"></div>
                             <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Guardar Alterações</button>
@@ -120,7 +124,6 @@
                     </div>
                 </div>`;
             
-            // Adicionar o listener para o formulário de edição
             document.getElementById('profile-edit-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const feedbackEl = document.getElementById('edit-feedback');
@@ -128,13 +131,27 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'A guardar...';
 
+                const avatarFile = e.target['avatar-upload'].files[0];
+                let avatarUrl = document.getElementById('current-avatar-url').value;
+
+                if (avatarFile) {
+                    const filePath = `public/${user.id}/${Date.now()}-${avatarFile.name}`;
+                    const { error: uploadError } = await client.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
+
+                    if (uploadError) {
+                        alert('Erro no upload da imagem: ' + uploadError.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Guardar Alterações';
+                        return;
+                    }
+
+                    const { data: urlData } = client.storage.from('avatars').getPublicUrl(filePath);
+                    avatarUrl = urlData.publicUrl;
+                }
+
                 const specialtiesArray = e.target.specialties.value.split(',').map(s => s.trim()).filter(s => s);
                 
-                const updatedProfile = {
-                    avatar_url: e.target.avatar_url.value,
-                    bio: e.target.bio.value,
-                    specialties: specialtiesArray,
-                };
+                const updatedProfile = { avatar_url: avatarUrl, bio: e.target.bio.value, specialties: specialtiesArray };
                 
                 const { error } = await client.from('profiles').update(updatedProfile).eq('id', user.id);
 
@@ -144,6 +161,7 @@
                 } else {
                     feedbackEl.textContent = "Perfil atualizado com sucesso!";
                     feedbackEl.classList.add('text-green-400');
+                    document.getElementById('current-avatar-url').value = avatarUrl;
                 }
                 
                 submitBtn.disabled = false;
