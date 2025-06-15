@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil do Tarólogo - Portal Místico</title>
+    <title>Perfil do Tarólogo - Clã Michetti</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
 
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Portal Místico</a>
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Clã Michetti</a>
             <div class="hidden md:flex items-center space-x-6">
                 <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
                 <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
@@ -40,7 +40,9 @@
                 <!-- Coluna da Esquerda: Foto e Botão -->
                 <div class="md:col-span-1 text-center">
                     <img id="profile-avatar" src="" alt="[Foto do Tarólogo]" class="w-48 h-48 rounded-full mx-auto mb-6 border-4 border-purple-800 object-cover">
-                    <button id="start-chat-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Iniciar Consulta</button>
+                    <button id="start-chat-btn" class="w-full text-white font-bold py-3 px-6 rounded-lg transition-colors" disabled>
+                        A verificar estado...
+                    </button>
                 </div>
 
                 <!-- Coluna da Direita: Detalhes -->
@@ -71,6 +73,7 @@
 
             const loader = document.getElementById('loader');
             const container = document.getElementById('profile-container');
+            const startChatBtn = document.getElementById('start-chat-btn');
 
             if (!readerId) {
                 loader.innerHTML = '<p class="text-red-400 text-center">Tarólogo não especificado.</p>';
@@ -99,11 +102,25 @@
                 } else {
                     specialtiesContainer.innerHTML = `<span class="text-sm text-gray-500">Nenhuma especialidade listada.</span>`;
                 }
+
+                // **LÓGICA DO BOTÃO DE ESTADO**
+                const isOnline = reader.online_status === 'online';
+                if (isOnline) {
+                    startChatBtn.disabled = false;
+                    startChatBtn.textContent = 'Iniciar Consulta';
+                    startChatBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    startChatBtn.classList.remove('bg-gray-600', 'cursor-not-allowed');
+                } else {
+                    startChatBtn.disabled = true;
+                    startChatBtn.textContent = 'Offline';
+                    startChatBtn.classList.add('bg-gray-600', 'cursor-not-allowed');
+                    startChatBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                }
                 
                 container.classList.remove('hidden');
             }
 
-            document.getElementById('start-chat-btn').addEventListener('click', async (e) => {
+            startChatBtn.addEventListener('click', async (e) => {
                 e.target.disabled = true;
                 e.target.textContent = "A verificar...";
                 
