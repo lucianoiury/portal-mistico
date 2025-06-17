@@ -96,48 +96,48 @@
         window.addEventListener('load', async () => {
             showLoader(true, 'A carregar o perfil...');
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            let currentUser = null;
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) { window.location.href = 'login.html'; return; }
-            
-            const currentUser = session.user;
+            if (session) {
+                currentUser = session.user;
+            }
             const urlParams = new URLSearchParams(window.location.search);
             const readerId = urlParams.get('id');
-
             const loader = document.getElementById('loader');
             const container = document.getElementById('profile-container');
             const startChatBtn = document.getElementById('start-chat-btn');
-
             if (!readerId) {
                 loader.innerHTML = '<p class="text-red-400 text-center">Tarólogo não especificado.</p>';
                 return;
             }
-
             async function loadProfile() {
                 const { data: reader, error } = await supabaseClient.from('profiles').select('*').eq('id', readerId).single();
-                
                 loader.style.display = 'none';
                 if (error || !reader) {
                     container.innerHTML = '<p class="text-red-400 text-center">Não foi possível carregar o perfil deste tarólogo.</p>';
                     container.classList.remove('hidden');
                     return;
                 }
-
                 document.getElementById('profile-avatar').src = reader.avatar_url || `https://placehold.co/200x200/7b2cbf/FFFFFF?text=${reader.full_name.charAt(0)}`;
                 document.getElementById('profile-name').textContent = reader.full_name;
                 document.getElementById('profile-bio').textContent = reader.bio || 'Este tarólogo ainda não adicionou uma biografia.';
-                
                 const specialtiesContainer = document.getElementById('profile-specialties');
                 if (reader.specialties && reader.specialties.length > 0) {
+                    specialtiesContainer.innerHTML = '';
                     reader.specialties.forEach(s => {
                         specialtiesContainer.innerHTML += `<span class="bg-purple-900/50 text-purple-300 text-sm font-medium mr-2 px-3 py-1 rounded-full">${s}</span>`;
                     });
                 } else {
                     specialtiesContainer.innerHTML = `<span class="text-sm text-gray-500">Nenhuma especialidade listada.</span>`;
                 }
-
-                // **LÓGICA DO BOTÃO DE ESTADO**
+                // Lógica do botão de chat
                 const isOnline = reader.online_status === 'online';
-                if (isOnline) {
+                if (!currentUser) {
+                    startChatBtn.disabled = true;
+                    startChatBtn.textContent = 'Faça login para consultar';
+                    startChatBtn.classList.add('bg-gray-600', 'cursor-not-allowed');
+                    startChatBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                } else if (isOnline) {
                     startChatBtn.disabled = false;
                     startChatBtn.textContent = 'Iniciar Consulta';
                     startChatBtn.classList.add('bg-green-600', 'hover:bg-green-700');
@@ -148,21 +148,21 @@
                     startChatBtn.classList.add('bg-gray-600', 'cursor-not-allowed');
                     startChatBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
                 }
-                
                 container.classList.remove('hidden');
             }
-
             startChatBtn.addEventListener('click', async (e) => {
+                if (!currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
                 e.target.disabled = true;
                 e.target.textContent = "A verificar...";
-                
                 const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('chat_credits_minutes').eq('id', currentUser.id).single();
                 if (profileError || !profile || profile.chat_credits_minutes < 1) {
                     alert("Você não tem créditos de chat suficientes.");
                     window.location.href = 'creditos.html';
                     return;
                 }
-
                 const { data: conversation, error: convError } = await supabaseClient.from('conversations').insert({ client_id: currentUser.id, tarot_reader_id: readerId, status: 'active' }).select().single();
                 if (convError) {
                     alert("Erro ao iniciar a conversa.");
@@ -172,7 +172,6 @@
                 }
                 window.location.href = `chat.html?id=${conversation.id}`;
             });
-
             // Exemplo de integração do toast no perfil do tarólogo
             function perfilSalvo() {
                 showToast('Perfil atualizado com sucesso!', 'success');
