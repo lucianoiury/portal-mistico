@@ -5,34 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Portal Místico</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Custom Styles -->
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827;
-        }
-        h1, h2, h3, .font-cinzel {
-            font-family: 'Cinzel', serif;
-        }
-        .form-container {
-            background-color: rgba(17, 24, 39, 0.8);
-            backdrop-filter: blur(10px);
-        }
-        #message-box {
-            display: none;
-            transition: opacity 0.5s ease-in-out;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #111827; }
+        h1, h2, h3, .font-cinzel { font-family: 'Cinzel', serif; }
+        .form-container { background-color: rgba(17, 24, 39, 0.8); backdrop-filter: blur(10px); }
+        #message-box { display: none; transition: opacity 0.5s ease-in-out; }
     </style>
 </head>
 <body class="text-gray-200 bg-cover bg-center" style="background-image: linear-gradient(rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 1)), url('https://placehold.co/1920x1080/000000/FFFFFF?text=Universo+Mistico');">
@@ -41,110 +24,84 @@
         <div class="w-full max-w-md mx-auto">
         
             <div class="text-center mb-8">
-                <a href="index.html" class="text-4xl font-bold font-cinzel text-purple-300">
-                    Portal Místico
-                </a>
+                <a href="index.html" class="text-4xl font-bold font-cinzel text-purple-300">Portal Místico</a>
                 <h2 class="text-2xl text-white mt-2">Bem-vindo de volta</h2>
                 <p class="text-gray-400">Acesse sua conta para continuar sua jornada.</p>
             </div>
 
-            <!-- Div para exibir mensagens de sucesso ou erro -->
             <div id="message-box" class="p-4 mb-4 text-sm text-center rounded-lg"></div>
 
             <div class="form-container border border-purple-900/50 rounded-2xl shadow-2xl p-8">
                 <form id="login-form" class="space-y-6">
-                    <!-- Email Input -->
                     <div>
                         <label for="email" class="block text-sm font-medium text-purple-200">Email</label>
-                        <input type="email" id="email" name="email" required
-                               class="mt-1 block w-full bg-gray-800/50 border border-purple-800 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 transition">
+                        <input type="email" id="email" name="email" required class="mt-1 block w-full bg-gray-800/50 border border-purple-800 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 transition">
                     </div>
-
-                    <!-- Password Input -->
                     <div>
                         <label for="password" class="block text-sm font-medium text-purple-200">Senha</label>
-                        <input type="password" id="password" name="password" required
-                               class="mt-1 block w-full bg-gray-800/50 border border-purple-800 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 transition">
+                        <input type="password" id="password" name="password" required class="mt-1 block w-full bg-gray-800/50 border border-purple-800 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 transition">
                     </div>
-
-                    <!-- Submit Button -->
                     <div>
-                        <button type="submit"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 transition-all duration-300">
-                            Entrar
-                        </button>
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500 transition-all duration-300">Entrar</button>
                     </div>
                 </form>
-
                 <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-400">
-                        Não tem uma conta?
-                        <a href="cadastro.html" class="font-medium text-purple-400 hover:text-purple-300">
-                            Cadastre-se
-                        </a>
-                    </p>
+                    <p class="text-sm text-gray-400">Não tem uma conta? <a href="cadastro.html" class="font-medium text-purple-400 hover:text-purple-300">Cadastre-se</a></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Nosso script de configuração do Supabase -->
-    <script src="auth-config.js" defer></script>
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
 
-    <!-- Script para lidar com a lógica de login -->
+    <script src="auth-config.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const messageBox = document.getElementById('message-box');
-            
-            function showMessage(message, type = 'info') {
-                messageBox.textContent = message;
-                messageBox.style.display = 'block';
-                const classMap = {
-                    success: 'bg-green-800 text-green-200',
-                    error: 'bg-red-800 text-red-200',
-                    info: 'bg-blue-800 text-blue-200'
-                };
-                messageBox.className = `p-4 mb-4 text-sm text-center rounded-lg ${classMap[type] || classMap['info']}`;
-            }
-            
-            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
-                console.error('Variáveis do Supabase não encontradas. Verifique auth-config.js');
-                showMessage('Erro de configuração do cliente.', 'error');
-                return;
-            }
-
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const loginForm = document.getElementById('login-form');
 
+            function showMessage(message, type = 'info') {
+                messageBox.textContent = message;
+                messageBox.style.display = 'block';
+                const classMap = { success: 'bg-green-800 text-green-200', error: 'bg-red-800 text-red-200', info: 'bg-blue-800 text-blue-200' };
+                messageBox.className = `p-4 mb-4 text-sm text-center rounded-lg ${classMap[type] || classMap['info']}`;
+            }
+
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+                if (type === 'success') toast.classList.add('bg-green-600');
+                if (type === 'error') toast.classList.add('bg-red-600');
+                if (type === 'info') toast.classList.add('bg-blue-600');
+                toast.classList.remove('hidden');
+                toast.style.opacity = 1;
+                setTimeout(() => {
+                    toast.style.opacity = 0;
+                    setTimeout(() => toast.classList.add('hidden'), 300);
+                }, 3000);
+            }
+
             loginForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const form = event.target;
-                const email = form.email.value;
-                const password = form.password.value;
-
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password,
+                    email: event.target.email.value,
+                    password: event.target.password.value,
                 });
-
                 if (error) {
-                    console.error('Erro no login:', error.message);
                     showMessage('Email ou senha inválidos.', 'error');
+                    showToast('Email ou senha inválidos.', 'error');
                     return;
                 }
-
                 if (data.user) {
-                    console.log('Login bem-sucedido!', data);
                     showMessage('Login efetuado com sucesso! Redirecionando...', 'success');
-                    
-                    // Redireciona para a página de DASHBOARD após um curto período
-                    setTimeout(() => {
-                        window.location.href = 'dashboard.html';
-                    }, 1500);
+                    showToast('Login realizado com sucesso!', 'success');
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
                 }
             });
         });
     </script>
-
 </body>
 </html>

@@ -109,6 +109,11 @@
                     </p>
                 </div>
             </div>
+
+            <div id="loader" class="flex flex-col items-center justify-center text-center min-h-[120px] transition-opacity duration-500" style="display:none;">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                <p class="mt-4 text-purple-200">Criando sua conta...</p>
+            </div>
         </div>
     </div>
     
@@ -142,6 +147,8 @@
                 const fullName = form.name.value;
                 const userRole = form['user-type'].value;
                 
+                showLoader(true); // Mostra o loader
+
                 // 1. Tenta criar o usuário no serviço de autenticação do Supabase
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                     email: email,
@@ -154,9 +161,12 @@
                     }
                 });
 
+                showLoader(false); // Esconde o loader
+
                 if (authError) {
                     console.error('Erro no cadastro:', authError.message);
                     showMessage('Erro ao criar conta: ' + authError.message, 'error');
+                    showToast('Erro ao criar conta: ' + authError.message, 'error');
                     return;
                 }
 
@@ -175,11 +185,12 @@
                     if (profileError) {
                         console.error('Erro ao criar perfil:', profileError.message);
                         showMessage('Sua conta foi criada, mas houve um erro ao salvar seu perfil. Contate o suporte.', 'error');
+                        showToast('Conta criada, mas erro ao salvar perfil.', 'error');
                         return;
                     }
-                    
                     console.log('Usuário e perfil criados com sucesso!', authData);
                     showMessage('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.', 'success');
+                    showToast('Cadastro realizado com sucesso! Verifique seu e-mail.', 'success');
                     signupForm.reset(); // Limpa o formulário
                 }
             });
@@ -197,7 +208,41 @@
                      messageBox.className = 'p-4 mb-4 text-sm text-center rounded-lg bg-blue-800 text-blue-200';
                 }
             }
+
+            function showLoader(show = true, msg = 'Criando sua conta...') {
+                const loader = document.getElementById('loader');
+                if (show) {
+                    loader.classList.remove('opacity-0');
+                    loader.classList.add('opacity-100');
+                    loader.querySelector('p').textContent = msg;
+                    loader.style.display = 'flex';
+                } else {
+                    loader.classList.add('opacity-0');
+                    setTimeout(() => loader.style.display = 'none', 500);
+                }
+            }
         });
+    </script>
+
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
+    <script>
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+      if (type === 'success') toast.classList.add('bg-green-600');
+      if (type === 'error') toast.classList.add('bg-red-600');
+      if (type === 'info') toast.classList.add('bg-blue-600');
+      toast.classList.remove('hidden');
+      toast.style.opacity = 1;
+      setTimeout(() => {
+        toast.style.opacity = 0;
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 3000);
+    }
+    // Exemplo de uso: showToast('Cadastro realizado com sucesso!', 'success');
     </script>
 
 </body>

@@ -42,16 +42,32 @@
 
     <main class="container mx-auto p-8">
         <h1 class="text-4xl font-cinzel text-center text-purple-300 mb-12">Nossos Tesouros Místicos</h1>
-        <div id="loader" class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-            <p class="mt-4">A carregar os produtos...</p>
+        <div id="loader" class="flex flex-col items-center justify-center text-center min-h-[120px] transition-opacity duration-500">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <p class="mt-4 text-purple-200">A buscar os produtos...</p>
         </div>
         <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 opacity-0 transition-opacity duration-500">
         </div>
     </main>
 
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
     <script src="auth-config.js"></script>
     <script>
+        function showLoader(show = true, msg = 'A buscar os produtos...') {
+            const loader = document.getElementById('loader');
+            if (show) {
+                loader.classList.remove('opacity-0');
+                loader.classList.add('opacity-100');
+                loader.querySelector('p').textContent = msg;
+                loader.style.display = 'flex';
+            } else {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        }
+
         window.addEventListener('load', async () => {
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -83,6 +99,22 @@
             }
             productGrid.style.opacity = '1';
         });
+
+        function showToast(message, type = 'success') {
+          const toast = document.getElementById('toast');
+          toast.textContent = message;
+          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+          if (type === 'success') toast.classList.add('bg-green-600');
+          if (type === 'error') toast.classList.add('bg-red-600');
+          if (type === 'info') toast.classList.add('bg-blue-600');
+          toast.classList.remove('hidden');
+          toast.style.opacity = 1;
+          setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+          }, 3000);
+        }
+        // Exemplo de uso: showToast('Bem-vindo à loja!', 'info');
     </script>
 </body>
 </html>

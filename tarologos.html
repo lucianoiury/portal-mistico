@@ -45,8 +45,26 @@
         </div>
     </main>
 
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
     <script src="auth-config.js"></script>
     <script>
+        function showToast(message, type = 'success') {
+          const toast = document.getElementById('toast');
+          toast.textContent = message;
+          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+          if (type === 'success') toast.classList.add('bg-green-600');
+          if (type === 'error') toast.classList.add('bg-red-600');
+          if (type === 'info') toast.classList.add('bg-blue-600');
+          toast.classList.remove('hidden');
+          toast.style.opacity = 1;
+          setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+          }, 3000);
+        }
+
         window.addEventListener('load', async () => {
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -71,6 +89,7 @@
                 if (error) {
                     container.innerHTML = `<p class="text-red-400 text-center col-span-full">Erro ao carregar os tarólogos.</p>`;
                     container.classList.remove('hidden');
+                    showToast('Erro ao carregar os tarólogos.', 'error');
                     return;
                 }
                 
@@ -119,6 +138,15 @@
             }
             loadTarotReaders();
         });
+
+        // Exemplo de integração do toast em tarólogos
+        function favoritoAdicionado() {
+            showToast('Tarólogo adicionado aos favoritos!', 'success');
+        }
+        function tarologosError(msg) {
+            showToast(msg || 'Erro ao carregar tarólogos.', 'error');
+        }
+        // Use showToast em todos os pontos de feedback ao usuário!
     </script>
 </body>
 </html>

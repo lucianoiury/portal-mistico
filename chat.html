@@ -19,24 +19,20 @@
 
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
-                Portal Místico
-            </a>
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Portal Místico</a>
             <div id="timer" class="text-xl font-bold text-yellow-400">
                 Tempo Restante: --:--
             </div>
-            <div>
-                <a href="dashboard.html" class="hover:text-purple-300 transition-colors">Sair do Chat</a>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
             </div>
         </nav>
     </header>
 
     <main class="container mx-auto p-4 h-[calc(100vh-80px)] flex flex-col">
-        <div id="loader" class="text-center py-10 flex-grow flex items-center justify-center">
-            <div>
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-                <p class="mt-4">A iniciar a sessão de chat...</p>
-            </div>
+        <div id="loader" class="flex flex-col items-center justify-center text-center min-h-[120px] transition-opacity duration-500">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <p class="mt-4 text-purple-200">A iniciar a sessão de chat...</p>
         </div>
 
         <div id="chat-interface" class="hidden flex-grow flex flex-col bg-gray-800/50 rounded-lg overflow-hidden">
@@ -54,9 +50,41 @@
         </div>
     </main>
 
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
     <script src="auth-config.js"></script>
     <script>
+        function showToast(message, type = 'success') {
+          const toast = document.getElementById('toast');
+          toast.textContent = message;
+          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+          if (type === 'success') toast.classList.add('bg-green-600');
+          if (type === 'error') toast.classList.add('bg-red-600');
+          if (type === 'info') toast.classList.add('bg-blue-600');
+          toast.classList.remove('hidden');
+          toast.style.opacity = 1;
+          setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+          }, 3000);
+        }
+
+        function showLoader(show = true, msg = 'A iniciar a sessão de chat...') {
+            const loader = document.getElementById('loader');
+            if (show) {
+                loader.classList.remove('opacity-0');
+                loader.classList.add('opacity-100');
+                loader.querySelector('p').textContent = msg;
+                loader.style.display = 'flex';
+            } else {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        }
+
         window.addEventListener('load', async () => {
+            showLoader(true, 'A iniciar a sessão de chat...');
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
             
@@ -78,6 +106,7 @@
 
             let chatCredits = 0;
             let timerInterval;
+            let conversationData = null;
 
             if (!conversationId) {
                 loader.innerHTML = '<p class="text-red-400">ID da conversa não encontrado.</p>';
@@ -85,20 +114,19 @@
             }
 
             async function initializeChat() {
-                // 1. Validar a conversa e buscar o ID do cliente
                 const { data: conversation, error: convError } = await supabaseClient
                     .from('conversations')
-                    .select('client_id')
+                    .select('client_id, tarot_reader_id, status')
                     .eq('id', conversationId)
-                    .or(`client_id.eq.${currentUser.id},tarot_reader_id.eq.${currentUser.id}`) // Garante que o utilizador pertence à conversa
+                    .or(`client_id.eq.${currentUser.id},tarot_reader_id.eq.${currentUser.id}`)
                     .single();
                 
                 if (convError || !conversation) {
                     loader.innerHTML = '<p class="text-red-400">Acesso negado a esta conversa.</p>';
                     return;
                 }
+                conversationData = conversation;
 
-                // 2. Buscar os créditos do cliente
                 const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('chat_credits_minutes')
@@ -111,14 +139,16 @@
                 }
                 chatCredits = profile.chat_credits_minutes;
 
-                // 3. Carregar o histórico de mensagens
                 await loadMessages();
-                
-                // 4. Iniciar a subscrição em tempo real para novas mensagens
                 listenForNewMessages();
-
-                // 5. Iniciar o temporizador
-                startTimer();
+                
+                // Só inicia o temporizador se for o cliente e a conversa não estiver terminada
+                if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+                    startTimer();
+                } else if(conversation.status === 'finished') {
+                    timerEl.textContent = "Sessão Terminada";
+                    disableChat("Sessão terminada.");
+                }
 
                 loader.style.display = 'none';
                 chatInterface.classList.remove('hidden');
@@ -127,14 +157,11 @@
             async function loadMessages() {
                 const { data: messages, error } = await supabaseClient
                     .from('messages')
-                    .select('*, profiles(full_name)')
+                    .select('*')
                     .eq('conversation_id', conversationId)
                     .order('created_at', { ascending: true });
                 
-                if (error) {
-                    console.error("Erro ao carregar mensagens:", error);
-                    return;
-                }
+                if (error) { console.error("Erro ao carregar mensagens:", error); return; }
 
                 messages.forEach(renderMessage);
                 scrollToBottom();
@@ -144,13 +171,7 @@
                 const isSentByUser = message.sender_id === currentUser.id;
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `flex ${isSentByUser ? 'justify-end' : 'justify-start'}`;
-                
-                messageDiv.innerHTML = `
-                    <div class="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg ${isSentByUser ? 'bg-purple-800' : 'bg-gray-700'}">
-                        <p>${message.content}</p>
-                        <p class="text-xs text-gray-400 mt-1 text-right">${new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                    </div>
-                `;
+                messageDiv.innerHTML = `<div class="max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg ${isSentByUser ? 'bg-purple-800' : 'bg-gray-700'}"><p>${message.content}</p><p class="text-xs text-gray-400 mt-1 text-right">${new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div>`;
                 messagesContainer.appendChild(messageDiv);
             }
 
@@ -162,8 +183,10 @@
                 supabaseClient
                     .channel(`messages_conv_${conversationId}`)
                     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
-                        renderMessage(payload.new);
-                        scrollToBottom();
+                        if (payload.new.sender_id !== currentUser.id) {
+                            renderMessage(payload.new);
+                            scrollToBottom();
+                        }
                     })
                     .subscribe();
             }
@@ -172,46 +195,49 @@
                 e.preventDefault();
                 const content = messageInput.value.trim();
                 if (content === '') return;
-
+                
+                const tempMessage = { sender_id: currentUser.id, content, created_at: new Date() };
+                renderMessage(tempMessage);
+                scrollToBottom();
                 messageInput.value = '';
                 
                 await supabaseClient
                     .from('messages')
-                    .insert({
-                        conversation_id: conversationId,
-                        sender_id: currentUser.id,
-                        content: content
-                    });
+                    .insert({ conversation_id: conversationId, sender_id: currentUser.id, content: content });
+                
+                showToast('Mensagem enviada!', 'success');
             });
+            
+            function disableChat(reason) {
+                messageInput.disabled = true;
+                messageInput.placeholder = reason;
+                messageForm.querySelector('button').disabled = true;
+            }
 
             function startTimer() {
-                let timeLeft = chatCredits * 60; // Converte minutos para segundos
+                let timeLeft = chatCredits * 60; 
                 
                 timerInterval = setInterval(async () => {
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
                         timerEl.textContent = "Tempo Esgotado";
-                        messageInput.disabled = true;
-                        messageInput.placeholder = "Seus créditos acabaram.";
-                        messageForm.querySelector('button').disabled = true;
-                        // Atualiza o estado da conversa para "terminada"
+                        disableChat("Seus créditos acabaram.");
                         await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                        showToast('Sessão encerrada. Créditos esgotados.', 'info');
                         return;
                     }
                     
                     timeLeft--;
-                    
                     const minutes = Math.floor(timeLeft / 60);
                     const seconds = timeLeft % 60;
                     timerEl.textContent = `Tempo: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
                     
-                    // A cada minuto completo, debita um crédito no Supabase
-                    if (timeLeft % 60 === 0) {
+                    if (timeLeft % 60 === 0 && timeLeft > 0) {
                         chatCredits--;
                         await supabaseClient
                             .from('profiles')
                             .update({ chat_credits_minutes: chatCredits })
-                            .eq('id', currentUser.id);
+                            .eq('id', conversationData.client_id);
                     }
                 }, 1000);
             }

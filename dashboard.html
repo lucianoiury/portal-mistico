@@ -26,7 +26,7 @@
 </head>
 <body class="text-gray-200">
 
-    <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 text-center p-4">
+    <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 text-center p-4 transition-opacity duration-500">
         <div>
             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
             <p id="loader-message" class="mt-4 text-purple-200">A carregar o seu painel...</p>
@@ -50,9 +50,41 @@
         <!-- O conteúdo dinâmico do painel será inserido aqui pelo JavaScript -->
     </div>
 
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
     <script src="auth-config.js"></script>
     <script>
+        function showToast(message, type = 'success') {
+          const toast = document.getElementById('toast');
+          toast.textContent = message;
+          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+          if (type === 'success') toast.classList.add('bg-green-600');
+          if (type === 'error') toast.classList.add('bg-red-600');
+          if (type === 'info') toast.classList.add('bg-blue-600');
+          toast.classList.remove('hidden');
+          toast.style.opacity = 1;
+          setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+          }, 3000);
+        }
+
+        function showLoader(show = true, msg = 'A carregar o seu painel...') {
+            const loader = document.getElementById('loader');
+            if (show) {
+                loader.classList.remove('opacity-0');
+                loader.classList.add('opacity-100');
+                loader.querySelector('p, #loader-message').textContent = msg;
+                loader.style.display = 'flex';
+            } else {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        }
+
         window.addEventListener('load', async () => {
+            showLoader(true, 'A carregar o seu painel...');
             const contentEl = document.getElementById('content');
             const loaderEl = document.getElementById('loader');
             const headerEl = document.getElementById('main-header');
@@ -84,7 +116,7 @@
                 await loadClientConversations(user, supabaseClient);
             }
 
-            loaderEl.style.display = 'none';
+            showLoader(false);
             contentEl.classList.add('loaded');
             
             document.getElementById('logout-button').addEventListener('click', async () => { await supabaseClient.auth.signOut(); window.location.href = 'index.html'; });
@@ -167,7 +199,54 @@
                 }
             });
 
-            document.getElementById('profile-edit-form').addEventListener('submit', async (e) => { /* ...código de edição de perfil... */ });
+            document.getElementById('profile-edit-form').addEventListener('submit', async (e) => { 
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const avatarFile = formData.get('avatar-upload');
+                const bio = formData.get('bio');
+                const specialties = formData.get('specialties').split(',').map(s => s.trim());
+
+                let avatarUrl = null;
+                if (avatarFile && avatarFile.size > 0) {
+                    // Upload da nova imagem
+                    const { data, error: uploadError } = await client.storage.from('avatars').upload(`public/${user.id}.png`, avatarFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
+                    if (uploadError) {
+                        painelError('Erro ao fazer upload da imagem. Tente novamente.');
+                        return;
+                    }
+
+                    avatarUrl = `https://your-supabase-url.supabase.co/storage/v1/object/public/avatars/public/${user.id}.png`;
+                } else {
+                    avatarUrl = document.getElementById('current-avatar-url').value;
+                }
+
+                // Atualização dos dados do perfil
+                const { error: updateError } = await client.from('profiles').update({
+                    avatar_url: avatarUrl,
+                    bio,
+                    specialties
+                }).eq('id', user.id);
+
+                if (updateError) {
+                    painelError('Erro ao atualizar o perfil. Tente novamente.');
+                    return;
+                }
+
+                painelAtualizado();
+                setTimeout(() => { window.location.reload(); }, 1500);
+            });
+        }
+
+        // Exemplo de integração do toast no dashboard
+        function painelAtualizado() {
+            showToast('Painel atualizado!', 'success');
+        }
+        function painelError(msg) {
+            showToast(msg || 'Erro ao atualizar painel.', 'error');
         }
 
         async function loadClientOrders(user, client) { /* ...código mantido... */ }

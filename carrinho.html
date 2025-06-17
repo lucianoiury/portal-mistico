@@ -27,11 +27,13 @@
 
     <header class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">
-                Portal Místico
-            </a>
-            <div>
-                <a href="loja.html" class="hover:text-purple-300 transition-colors">Continuar a Comprar</a>
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Portal Místico</a>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
+                <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
             </div>
         </nav>
     </header>
@@ -39,9 +41,9 @@
     <main id="main-content" class="container mx-auto p-4 md:p-8">
         <h1 class="text-4xl font-cinzel text-center text-purple-300 mb-12">Seu Carrinho Místico</h1>
         
-        <div id="loader" class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
-            <p class="mt-4">A carregar o seu carrinho...</p>
+        <div id="loader" class="flex flex-col items-center justify-center text-center min-h-[120px] transition-opacity duration-500">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <p class="mt-4 text-purple-200">A carregar o seu carrinho...</p>
         </div>
         
         <div class="md:grid md:grid-cols-3 md:gap-8">
@@ -55,9 +57,41 @@
         </div>
     </main>
 
+    <!-- Toast de feedback visual -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+
     <script src="auth-config.js"></script>
     <script>
+        function showToast(message, type = 'success') {
+          const toast = document.getElementById('toast');
+          toast.textContent = message;
+          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
+          if (type === 'success') toast.classList.add('bg-green-600');
+          if (type === 'error') toast.classList.add('bg-red-600');
+          if (type === 'info') toast.classList.add('bg-blue-600');
+          toast.classList.remove('hidden');
+          toast.style.opacity = 1;
+          setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.classList.add('hidden'), 300);
+          }, 3000);
+        }
+
+        function showLoader(show = true, msg = 'A carregar o seu carrinho...') {
+            const loader = document.getElementById('loader');
+            if (show) {
+                loader.classList.remove('opacity-0');
+                loader.classList.add('opacity-100');
+                loader.querySelector('p').textContent = msg;
+                loader.style.display = 'flex';
+            } else {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        }
+
         window.addEventListener('load', async () => {
+            showLoader(true, 'A carregar o seu carrinho...');
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
             
@@ -159,6 +193,7 @@
             async function removeItem(e) {
                 const itemId = e.target.getAttribute('data-item-id');
                 await supabaseClient.from('cart_items').delete().eq('id', itemId);
+                showToast('Item removido do carrinho.', 'success');
                 renderCart();
             }
             
@@ -167,15 +202,17 @@
                 const newQuantity = parseInt(e.target.value, 10);
                 if (newQuantity < 1) {
                     await supabaseClient.from('cart_items').delete().eq('id', itemId);
+                    showToast('Item removido do carrinho.', 'success');
                 } else {
                     await supabaseClient.from('cart_items').update({ quantity: newQuantity }).eq('id', itemId);
+                    showToast('Quantidade atualizada.', 'success');
                 }
                 renderCart();
             }
 
             async function calculateShipping() {
                 const cepInput = document.getElementById('cep-input');
-                const cep = cepInput.value.replace(/\D/g, ''); // Remove non-digit characters
+                const cep = cepInput.value.replace(/\D/g, '');
                 const cepInfo = document.getElementById('cep-info');
 
                 if (cep.length !== 8) {
@@ -195,7 +232,8 @@
                     } else {
                         cepInfo.textContent = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
                         shippingCost = 15.50;
-                        localStorage.setItem('shippingCost', shippingCost); // Salva o frete para a próxima página
+                        localStorage.setItem('shippingCost', shippingCost);
+                        showToast('Frete calculado com sucesso.', 'success');
                     }
                 } catch (error) {
                     cepInfo.textContent = 'Erro ao consultar o CEP.';
