@@ -25,6 +25,7 @@
             </div>
             <div class="flex items-center space-x-4">
                 <a href="dashboard.html" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">Meu Painel</a>
+                <button id="end-session-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 hidden">Encerrar Consulta</button>
             </div>
         </nav>
     </header>
@@ -103,6 +104,7 @@
             const messageForm = document.getElementById('message-form');
             const messageInput = document.getElementById('message-input');
             const timerEl = document.getElementById('timer');
+            const endSessionBtn = document.getElementById('end-session-btn');
 
             let chatCredits = 0;
             let timerInterval;
@@ -214,10 +216,24 @@
                 showToast('Mensagem enviada!', 'success');
             });
             
+            // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
+            if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+                endSessionBtn.classList.remove('hidden');
+                endSessionBtn.addEventListener('click', async () => {
+                    clearInterval(timerInterval);
+                    await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                    timerEl.textContent = "Sessão Terminada";
+                    disableChat("Sessão encerrada pelo cliente.");
+                    endSessionBtn.disabled = true;
+                    showToast('Sessão encerrada com sucesso.', 'info');
+                });
+            }
+            
             function disableChat(reason) {
                 messageInput.disabled = true;
                 messageInput.placeholder = reason;
                 messageForm.querySelector('button').disabled = true;
+                endSessionBtn.classList.add('hidden');
             }
 
             function startTimer() {

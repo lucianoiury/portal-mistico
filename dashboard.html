@@ -198,14 +198,19 @@
         async function loadClientConversations(user, client) {
             const listContainer = document.getElementById('client-conversations-list');
             listContainer.innerHTML = '<p>A carregar...</p>';
-            const { data, error } = await client.from('conversations').select(`id, status, created_at, tarot_reader:tarot_reader_id (full_name)`).eq('client_id', user.id).order('created_at', { ascending: false });
+            const { data, error } = await client.from('conversations').select('id, status, created_at, tarot_reader_id').eq('client_id', user.id).order('created_at', { ascending: false });
             if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as consultas.</p>`; return; }
             if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não realizou nenhuma consulta.</div>`; return; }
             listContainer.innerHTML = '';
-            data.forEach(convo => {
-                 const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><div><p class="font-bold">Consulta com <span class="text-purple-300">${convo.tarot_reader.full_name}</span></p><p class="text-sm text-gray-400">${new Date(convo.created_at).toLocaleDateString()}</p></div><p class="font-bold capitalize">${convo.status}</p></a>`;
+            for (const convo of data) {
+                let tarotReaderName = 'Tarólogo';
+                if (convo.tarot_reader_id) {
+                    const { data: readerProfile } = await client.from('profiles').select('full_name').eq('id', convo.tarot_reader_id).single();
+                    if (readerProfile && readerProfile.full_name) tarotReaderName = readerProfile.full_name;
+                }
+                const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><div><p class="font-bold">Consulta com <span class="text-purple-300">${tarotReaderName}</span></p><p class="text-sm text-gray-400">${new Date(convo.created_at).toLocaleDateString()}</p></div><p class="font-bold capitalize">${convo.status}</p></a>`;
                 listContainer.innerHTML += card;
-            });
+            }
         }
 
         window.addEventListener('load', async () => {
