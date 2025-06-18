@@ -129,6 +129,22 @@
                 }
                 conversationData = conversation;
 
+                // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
+                if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+                    endSessionBtn.classList.remove('hidden');
+                    endSessionBtn.disabled = false;
+                    endSessionBtn.onclick = async () => {
+                        clearInterval(timerInterval);
+                        await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                        timerEl.textContent = "Sessão Terminada";
+                        disableChat("Sessão encerrada pelo cliente.");
+                        endSessionBtn.disabled = true;
+                        showToast('Sessão encerrada com sucesso.', 'info');
+                    };
+                } else {
+                    endSessionBtn.classList.add('hidden');
+                }
+
                 const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('chat_credits_minutes')
@@ -229,6 +245,22 @@
                     return;
                 }
                 conversationData = conversation;
+
+                // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
+                if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+                    endSessionBtn.classList.remove('hidden');
+                    endSessionBtn.disabled = false;
+                    endSessionBtn.onclick = async () => {
+                        clearInterval(timerInterval);
+                        await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                        timerEl.textContent = "Sessão Terminada";
+                        disableChat("Sessão encerrada pelo cliente.");
+                        endSessionBtn.disabled = true;
+                        showToast('Sessão encerrada com sucesso.', 'info');
+                    };
+                } else {
+                    endSessionBtn.classList.add('hidden');
+                }
 
                 const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
