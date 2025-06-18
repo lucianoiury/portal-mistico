@@ -15,10 +15,13 @@
         #content.loaded { opacity: 1; }
         .toggle-checkbox:checked { transform: translateX(100%); background-color: white; border-color: #34d399; }
         .toggle-checkbox:checked + .toggle-label { background-color: #34d399; }
-        @keyframes highlight { 0% { background-color: rgba(168, 85, 247, 0.3); } 100% { background-color: transparent; } }
+        @keyframes highlight {
+            0% { background-color: rgba(168, 85, 247, 0.3); }
+            100% { background-color: transparent; }
+        }
         .highlight-new { animation: highlight 2s ease-out; }
-        .toast { visibility: hidden; opacity: 0; transition: opacity 0.5s, transform 0.5s, visibility 0.5s; transform: translateY(20px); }
-        .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+        .toast { visibility: hidden; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
+        .toast.show { visibility: visible; opacity: 1; }
     </style>
 </head>
 <body class="text-gray-200 bg-cover bg-center" style="background-image: linear-gradient(rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 1)), url('https://placehold.co/1920x1080/0F172A/94A3B8?text=Plano+de+Fundo+Místico');">
@@ -51,61 +54,192 @@
 
     <script src="auth-config.js"></script>
     <script>
-        // --- FUNÇÕES AUXILIARES E DE RENDERIZAÇÃO ---
-        function showToast(message, type = 'info') { /* ...código mantido... */ }
-        function createConversationCard(convo, clientName) {
-            const statusClasses = { 'active': 'text-green-400', 'pending': 'text-yellow-400', 'finished': 'text-gray-500' };
-            const card = document.createElement('a');
-            card.href = `chat.html?id=${convo.id}`;
-            card.className = "block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-all";
-            card.dataset.convoId = convo.id;
-            // **CORREÇÃO AQUI: Garante que o nome do cliente é exibido corretamente.**
-            card.innerHTML = `<div class="flex justify-between items-center"><div><p class="text-xl font-bold">Consulta com <span class="text-purple-300">${clientName}</span></p></div><div class="text-right"><p class="font-bold capitalize ${statusClasses[convo.status] || ''}">${convo.status}</p><span class="text-sm text-gray-500">Entrar →</span></div></div>`;
-            return card;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast fixed bottom-4 right-4 z-50 min-w-[250px] max-w-xs px-4 py-3 rounded-lg shadow-lg text-white opacity-0 transition-opacity duration-300';
+            const typeClasses = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+            toast.classList.add(typeClasses[type] || typeClasses.info, 'show');
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
         }
-        function renderClientDashboard(profile) { /* ...código mantido... */ }
-        function renderTarotReaderDashboard(profile) { /* ...código mantido... */ }
-        
-        // --- FUNÇÕES DE LÓGICA DE DADOS ---
-        async function loadTarotReaderConversations(user, client, newConsultationId = null) {
-            const listContainer = document.getElementById('reader-conversations-list');
-            if (!listContainer) return;
-            
-            listContainer.innerHTML = '<p class="text-gray-400">A carregar consultas...</p>';
-            
-            const { data: conversations, error } = await client
-                .from('conversations')
-                .select(`id, status, created_at, profiles:client_id (full_name)`)
-                .eq('tarot_reader_id', user.id)
-                .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error("Erro ao buscar conversas:", error);
-                listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`;
-                return;
-            }
-            if (conversations.length === 0) {
-                listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`;
-                return;
-            }
+        function renderClientDashboard(profile) {
+            document.getElementById('content').innerHTML = `
+                <div id="client-dashboard">
+                    <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
+                        <h2 class="text-3xl font-cinzel mb-6">Painel do Cliente</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div><p class="text-sm text-gray-400">Nome</p><p class="text-lg font-bold text-purple-300">${profile.full_name}</p></div>
+                            <div><p class="text-sm text-gray-400">Sua Função</p><p class="text-lg capitalize">${profile.role}</p></div>
+                            <div><p class="text-sm text-gray-400">Créditos de Chat</p><p class="text-lg">${profile.chat_credits_minutes || 0} minutos</p></div>
+                        </div>
+                    </div>
+                    <div class="mt-12 bg-gray-800/30 p-8 rounded-lg"><h3 class="text-2xl font-cinzel text-center mb-6">Ações Rápidas</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><a href="tarologos.html" class="block text-center bg-purple-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-purple-700">Consultar Tarólogos</a><a href="creditos.html" class="block text-center bg-yellow-500 text-gray-900 font-bold py-4 px-6 rounded-lg hover:bg-yellow-400">Comprar Créditos</a></div></div>
+                    <div class="mt-12"><h3 class="text-2xl font-cinzel mb-6">Meus Pedidos da Loja</h3><div id="orders-list" class="space-y-4"></div></div>
+                    <div class="mt-12"><h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3><div id="client-conversations-list" class="space-y-4"></div></div>
+                </div>`;
+        }
+        
+        function renderTarotReaderDashboard(profile) {
+            document.getElementById('content').innerHTML = `
+                <div id="tarot-reader-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1 space-y-8">
+                        <div class="bg-gray-800/50 p-6 rounded-lg">
+                             <h2 class="text-2xl font-bold mb-4 text-purple-300">Estado de Atendimento</h2>
+                             <div class="flex items-center justify-between"><span id="status-text" class="font-bold text-lg transition-colors">Offline</span><div class="relative inline-block w-14 mr-2 align-middle select-none"><input type="checkbox" name="toggle" id="status-toggle" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in"/><label for="status-toggle" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-600 cursor-pointer transition-colors duration-200 ease-in"></label></div></div>
+                             <p class="text-xs text-gray-400 mt-2">Ative para aparecer como "Online" para os clientes.</p>
+                        </div>
+                        <form id="profile-edit-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
+                             <h2 class="text-2xl font-bold mb-4 text-purple-300">Editar Meu Perfil Público</h2>
+                             <input type="hidden" id="current-avatar-url" value="${profile.avatar_url || ''}">
+                            <div><label for="avatar-upload" class="block mb-1 text-sm">Foto de Perfil</label><input type="file" id="avatar-upload" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"></div>
+                            <div><label for="bio" class="block mb-1 text-sm">Sua Biografia</label><textarea id="bio" rows="5" class="w-full bg-gray-700 p-2 rounded text-white">${profile.bio || ''}</textarea></div>
+                            <div><label for="specialties" class="block mb-1 text-sm">Especialidades (separadas por vírgula)</label><input type="text" id="specialties" value="${(profile.specialties || []).join(', ')}" class="w-full bg-gray-700 p-2 rounded text-white"></div>
+                            <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Guardar Alterações</button>
+                            <p id="edit-feedback" class="text-sm text-center h-4"></p>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8"><h2 class="text-3xl font-cinzel mb-6">Painel do Tarólogo</h2><p>Bem-vindo(a), <span class="font-bold text-purple-300">${profile.full_name}</span>. Aqui estão as suas consultas.</p><p class="text-xs text-gray-400 mt-2">Esta lista atualiza automaticamente com novas consultas.</p></div>
+                        <div class="mt-12"><h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3><div id="reader-conversations-list" class="space-y-4"></div></div>
+                    </div>
+                </div>`;
+        }
+        
+        async function setupTarotReaderEventListeners(profile, user, client) {
+            await loadTarotReaderConversations(user, client);
+            const statusToggle = document.getElementById('status-toggle');
+            const statusText = document.getElementById('status-text');
+            const isOnline = profile.online_status === 'online';
+            statusToggle.checked = isOnline;
+            statusText.textContent = isOnline ? 'Online' : 'Offline';
+            statusText.classList.toggle('text-green-400', isOnline);
+
+            statusToggle.addEventListener('change', async (e) => {
+                const newStatus = e.target.checked ? 'online' : 'offline';
+                statusText.textContent = 'A atualizar...';
+                const { error } = await client.from('profiles').update({ online_status: newStatus }).eq('id', user.id);
+                if (error) { statusText.textContent = "Erro!"; alert("Não foi possível alterar o seu estado."); e.target.checked = !e.target.checked;
+                } else { statusText.textContent = newStatus === 'online' ? 'Online' : 'Offline'; statusText.classList.toggle('text-green-400', newStatus === 'online'); }
+            });
+
+            client.channel('new-consultations').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `tarot_reader_id=eq.${user.id}` }, async (payload) => {
+                const { data: newConvo, error } = await client.from('conversations').select(`*, client:client_id (full_name)`).eq('id', payload.new.id).single();
+                if (error || !newConvo) return;
+                showToast(`Nova consulta com ${newConvo.client.full_name}!`, 'info');
+                const listContainer = document.getElementById('reader-conversations-list');
+                const newCard = createConversationCard(newConvo, newConvo.client.full_name);
+                const noConsultationsMsg = listContainer.querySelector('div.text-center');
+                if(noConsultationsMsg) noConsultationsMsg.remove();
+                listContainer.prepend(newCard);
+                newCard.classList.add('highlight-new');
+            }).subscribe();
             
+            document.getElementById('profile-edit-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const feedbackEl = document.getElementById('edit-feedback');
+                const submitBtn = e.target.querySelector('button');
+                submitBtn.disabled = true; submitBtn.textContent = 'A guardar...';
+                const avatarFile = e.target['avatar-upload'].files[0];
+                let avatarUrl = document.getElementById('current-avatar-url').value;
+                if (avatarFile) {
+                    const filePath = `public/${user.id}/${Date.now()}-${avatarFile.name}`;
+                    const { data: uploadData, error: uploadError } = await client.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
+                    if (uploadError) { alert('Erro no upload da imagem: ' + uploadError.message); submitBtn.disabled = false; submitBtn.textContent = 'Guardar Alterações'; return; }
+                    const { data: urlData } = client.storage.from('avatars').getPublicUrl(uploadData.path);
+                    avatarUrl = urlData.publicUrl;
+                }
+                const specialtiesArray = e.target.specialties.value.split(',').map(s => s.trim()).filter(s => s);
+                const updatedProfile = { avatar_url: avatarUrl, bio: e.target.bio.value, specialties: specialtiesArray };
+                const { error } = await client.from('profiles').update(updatedProfile).eq('id', user.id);
+                if (error) { feedbackEl.textContent = "Erro ao guardar: " + error.message; feedbackEl.classList.add('text-red-400');
+                } else { feedbackEl.textContent = "Perfil atualizado!"; feedbackEl.classList.add('text-green-400'); document.getElementById('current-avatar-url').value = avatarUrl; }
+                submitBtn.disabled = false; submitBtn.textContent = 'Guardar Alterações';
+                setTimeout(() => { feedbackEl.textContent = ''; feedbackEl.classList.remove('text-red-400', 'text-green-400'); }, 4000);
+            });
+        }
+        
+        async function loadTarotReaderConversations(user, client) {
+            const listContainer = document.getElementById('reader-conversations-list');
+            if(!listContainer) return;
+            listContainer.innerHTML = '<p>A carregar consultas...</p>';
+            const { data, error } = await client.from('conversations').select(`id, status, created_at, profiles!conversations_client_id_fkey(full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
+            if (error) { console.error(error); listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as consultas.</p>`; return; }
+            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`; return; }
             listContainer.innerHTML = '';
-            conversations.forEach(convo => {
+            data.forEach(convo => {
                 const clientName = convo.profiles ? convo.profiles.full_name : 'Cliente Desconhecido';
                 const card = createConversationCard(convo, clientName);
-                if(convo.id === newConsultationId) { card.classList.add('highlight-new'); }
                 listContainer.appendChild(card);
             });
         }
         
-        async function setupTarotReaderEventListeners(profile, user, client) {
-             await loadTarotReaderConversations(user, client);
-            // ... (código dos listeners do tarólogo)
+        async function loadClientOrders(user, client) {
+            const listContainer = document.getElementById('orders-list');
+            listContainer.innerHTML = '<p>A carregar...</p>';
+            const { data, error } = await client.from('orders').select(`id, created_at, total_amount, status`).eq('user_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`; return; }
+            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não fez nenhum pedido.</div>`; return; }
+            listContainer.innerHTML = '';
+            data.forEach(order => {
+                const card = `<a href="pedido.html?id=${order.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><p class="font-bold">Pedido #${order.id.substring(0, 8)}</p><div><p class="font-bold text-lg text-purple-300">R$ ${order.total_amount.toFixed(2)}</p><p class="text-sm text-right capitalize">${order.status}</p></div></a>`;
+                listContainer.innerHTML += card;
+            });
         }
-        
-        // --- CÓDIGO PRINCIPAL ---
+
+        async function loadClientConversations(user, client) {
+            const listContainer = document.getElementById('client-conversations-list');
+            listContainer.innerHTML = '<p>A carregar...</p>';
+            const { data, error } = await client.from('conversations').select(`id, status, created_at, tarot_reader:tarot_reader_id (full_name)`).eq('client_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as consultas.</p>`; return; }
+            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não realizou nenhuma consulta.</div>`; return; }
+            listContainer.innerHTML = '';
+            data.forEach(convo => {
+                 const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><div><p class="font-bold">Consulta com <span class="text-purple-300">${convo.tarot_reader.full_name}</span></p><p class="text-sm text-gray-400">${new Date(convo.created_at).toLocaleDateString()}</p></div><p class="font-bold capitalize">${convo.status}</p></a>`;
+                listContainer.innerHTML += card;
+            });
+        }
+
         window.addEventListener('load', async () => {
-             // ... (código principal de inicialização)
+            const contentEl = document.getElementById('content');
+            const loaderEl = document.getElementById('loader');
+            const headerEl = document.getElementById('main-header');
+
+            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+                loaderEl.innerHTML = `<p class="text-red-400 text-lg">Erro de configuração.</p>`;
+                return;
+            }
+
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = 'login.html'; return; }
+            
+            const user = session.user;
+            const { data: profile, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+
+            if (error || !profile) {
+                loaderEl.innerHTML = '<p class="text-red-400 text-lg">Erro ao carregar o seu perfil.</p>';
+                return;
+            }
+            
+            headerEl.style.display = 'flex'; 
+
+            if (profile.role === 'tarologo') {
+                renderTarotReaderDashboard(profile);
+                await setupTarotReaderEventListeners(profile, user, supabaseClient);
+            } else if (profile.role === 'admin') {
+                window.location.href = 'admin.html';
+                return;
+            } else {
+                renderClientDashboard(profile);
+                await loadClientOrders(user, supabaseClient);
+                await loadClientConversations(user, supabaseClient);
+            }
+
+            loaderEl.style.display = 'none';
+            contentEl.classList.add('loaded');
+            
+            document.getElementById('logout-button').addEventListener('click', async () => { await supabaseClient.auth.signOut(); window.location.href = 'index.html'; });
         });
     </script>
 </body>
