@@ -105,18 +105,6 @@
             const messageInput = document.getElementById('message-input');
             const timerEl = document.getElementById('timer');
             const endSessionBtn = document.getElementById('end-session-btn');
-            // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
-            if(currentUser.id === conversationData.client_id && conversationData.status !== 'finished') {
-                endSessionBtn.classList.remove('hidden');
-                endSessionBtn.addEventListener('click', async () => {
-                    clearInterval(timerInterval);
-                    await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
-                    timerEl.textContent = "Sessão Terminada";
-                    disableChat("Sessão encerrada pelo cliente.");
-                    endSessionBtn.disabled = true;
-                    showToast('Sessão encerrada com sucesso.', 'info');
-                });
-            }
             
             let chatCredits = 0;
             let timerInterval;
@@ -228,17 +216,45 @@
                 showToast('Mensagem enviada!', 'success');
             });
             
-            // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
-            if(currentUser.id === conversationData.client_id && conversationData.status !== 'finished') {
-                endSessionBtn.classList.remove('hidden');
-                endSessionBtn.addEventListener('click', async () => {
-                    clearInterval(timerInterval);
-                    await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+            async function initializeChat() {
+                const { data: conversation, error: convError } = await supabaseClient
+                    .from('conversations')
+                    .select('client_id, tarot_reader_id, status')
+                    .eq('id', conversationId)
+                    .or(`client_id.eq.${currentUser.id},tarot_reader_id.eq.${currentUser.id}`)
+                    .single();
+                
+                if (convError || !conversation) {
+                    loader.innerHTML = '<p class="text-red-400">Acesso negado a esta conversa.</p>';
+                    return;
+                }
+                conversationData = conversation;
+
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('chat_credits_minutes')
+                    .eq('id', conversation.client_id)
+                    .single();
+                
+                if(profileError || !profile) {
+                     loader.innerHTML = '<p class="text-red-400">Não foi possível carregar os dados do cliente.</p>';
+                    return;
+                }
+                chatCredits = profile.chat_credits_minutes;
+
+                await loadMessages();
+                listenForNewMessages();
+                
+                // Só inicia o temporizador se for o cliente e a conversa não estiver terminada
+                if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+                    startTimer();
+                } else if(conversation.status === 'finished') {
                     timerEl.textContent = "Sessão Terminada";
-                    disableChat("Sessão encerrada pelo cliente.");
-                    endSessionBtn.disabled = true;
-                    showToast('Sessão encerrada com sucesso.', 'info');
-                });
+                    disableChat("Sessão terminada.");
+                }
+
+                loader.style.display = 'none';
+                chatInterface.classList.remove('hidden');
             }
             
             function disableChat(reason) {
