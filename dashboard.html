@@ -13,20 +13,20 @@
         body { font-family: 'Inter', sans-serif; background-color: #111827; }
         .font-cinzel { font-family: 'Cinzel', serif; }
         #content.loaded { opacity: 1; }
-        /* Estilos para o Toggle Switch */
-        .toggle-checkbox:checked {
-            transform: translateX(100%);
-            background-color: white;
-            border-color: #34d399; /* green-400 */
+        .toggle-checkbox:checked { transform: translateX(100%); background-color: white; border-color: #34d399; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #34d399; }
+        @keyframes highlight {
+            0% { background-color: rgba(168, 85, 247, 0.3); }
+            100% { background-color: transparent; }
         }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #34d399; /* green-400 */
-        }
+        .highlight-new { animation: highlight 2s ease-out; }
+        .toast { visibility: hidden; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
+        .toast.show { visibility: visible; opacity: 1; }
     </style>
 </head>
 <body class="text-gray-200 bg-cover bg-center" style="background-image: linear-gradient(rgba(17, 24, 39, 0.4), rgba(17, 24, 39, 1)), url('imagens/Templo1.jpg');">
 
-    <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 text-center p-4 transition-opacity duration-500">
+    <div id="loader" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50 text-center p-4 transition-opacity duration-500">
         <div>
             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
             <p id="loader-message" class="mt-4 text-purple-200">A carregar o seu painel...</p>
@@ -35,7 +35,7 @@
 
     <header id="main-header" class="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-purple-900/50">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold font-cinzel text-purple-300">Clã Michetti</a>
+            <a href="dashboard.html" class="text-2xl font-bold font-cinzel text-purple-300">Clã Michetti</a>
             <div class="hidden md:flex items-center space-x-6">
                 <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
                 <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
@@ -50,45 +50,24 @@
         <!-- O conteúdo dinâmico do painel será inserido aqui pelo JavaScript -->
     </div>
 
-    <!-- Toast de feedback visual -->
-    <div id="toast" class="fixed bottom-4 right-4 z-50 hidden min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white bg-green-600 transition-opacity duration-300"></div>
+    <div id="toast" class="fixed bottom-4 right-4 z-50 min-w-[250px] max-w-xs px-4 py-3 rounded-lg shadow-lg text-white"></div>
 
     <script src="auth-config.js"></script>
     <script>
         function showToast(message, type = 'success') {
-          const toast = document.getElementById('toast');
-          toast.textContent = message;
-          toast.className = 'fixed bottom-4 right-4 z-50 min-w-[200px] max-w-xs px-4 py-3 rounded shadow-lg text-white transition-opacity duration-300';
-          if (type === 'success') toast.classList.add('bg-green-600');
-          if (type === 'error') toast.classList.add('bg-red-600');
-          if (type === 'info') toast.classList.add('bg-blue-600');
-          toast.classList.remove('hidden');
-          toast.style.opacity = 1;
-          setTimeout(() => {
-            toast.style.opacity = 0;
-            setTimeout(() => toast.classList.add('hidden'), 300);
-          }, 3000);
-        }
-
-        function showLoader(show = true, msg = 'A carregar o seu painel...') {
-            const loader = document.getElementById('loader');
-            if (show) {
-                loader.classList.remove('opacity-0');
-                loader.classList.add('opacity-100');
-                loader.querySelector('p, #loader-message').textContent = msg;
-                loader.style.display = 'flex';
-            } else {
-                loader.classList.add('opacity-0');
-                setTimeout(() => loader.style.display = 'none', 500);
-            }
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'fixed bottom-4 right-4 z-50 min-w-[250px] max-w-xs px-4 py-3 rounded-lg shadow-lg text-white opacity-0 transition-opacity duration-300';
+            const typeClasses = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+            toast.classList.add(typeClasses[type] || typeClasses.info);
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
         }
 
         window.addEventListener('load', async () => {
-            showLoader(true, 'A carregar o seu painel...');
             const contentEl = document.getElementById('content');
             const loaderEl = document.getElementById('loader');
             const headerEl = document.getElementById('main-header');
-
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             const { data: { session } } = await supabaseClient.auth.getSession();
 
@@ -98,15 +77,15 @@
             const { data: profile, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
 
             if (error || !profile) {
-                loaderEl.innerHTML = '<p class="text-red-400 text-lg">Erro ao carregar o seu perfil. Por favor, tente fazer login novamente.</p>';
+                loaderEl.innerHTML = `<p class="text-red-400 text-lg">Erro ao carregar o seu perfil. Por favor, tente fazer login novamente.</p>`;
                 return;
             }
             
-            headerEl.classList.remove('hidden');
+            headerEl.style.display = 'block'; // Mostra o header
 
             if (profile.role === 'tarologo') {
-                renderTarotReaderDashboard(profile, user, supabaseClient);
-                await loadTarotReaderConversations(user, supabaseClient);
+                renderTarotReaderDashboard(profile);
+                await setupTarotReaderEventListeners(profile, user, supabaseClient);
             } else if (profile.role === 'admin') {
                 window.location.href = 'admin.html';
                 return;
@@ -116,7 +95,7 @@
                 await loadClientConversations(user, supabaseClient);
             }
 
-            showLoader(false);
+            loaderEl.style.display = 'none';
             contentEl.classList.add('loaded');
             
             document.getElementById('logout-button').addEventListener('click', async () => { await supabaseClient.auth.signOut(); window.location.href = 'index.html'; });
@@ -139,11 +118,10 @@
                 </div>`;
         }
         
-        function renderTarotReaderDashboard(profile, user, client) {
+        function renderTarotReaderDashboard(profile) {
             document.getElementById('content').innerHTML = `
                 <div id="tarot-reader-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-1 space-y-8">
-                        <!-- Controlo de Estado Online -->
                         <div class="bg-gray-800/50 p-6 rounded-lg">
                              <h2 class="text-2xl font-bold mb-4 text-purple-300">Estado de Atendimento</h2>
                              <div class="flex items-center justify-between">
@@ -155,9 +133,8 @@
                              </div>
                              <p class="text-xs text-gray-400 mt-2">Ative para aparecer como "Online" para os clientes.</p>
                         </div>
-                        <!-- Formulário de Edição de Perfil -->
                         <form id="profile-edit-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
-                            <h2 class="text-2xl font-bold mb-4 text-purple-300">Editar Meu Perfil Público</h2>
+                             <h2 class="text-2xl font-bold mb-4 text-purple-300">Editar Meu Perfil Público</h2>
                              <input type="hidden" id="current-avatar-url" value="${profile.avatar_url || ''}">
                             <div><label for="avatar-upload" class="block mb-1 text-sm">Foto de Perfil</label><input type="file" id="avatar-upload" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"></div>
                             <div><label for="bio" class="block mb-1 text-sm">Sua Biografia</label><textarea id="bio" rows="5" class="w-full bg-gray-700 p-2 rounded text-white">${profile.bio || ''}</textarea></div>
@@ -170,14 +147,17 @@
                         <div class="bg-gray-800/50 border border-purple-900/50 rounded-2xl shadow-2xl p-8">
                              <h2 class="text-3xl font-cinzel mb-6">Painel do Tarólogo</h2>
                              <p>Bem-vindo(a), <span class="font-bold text-purple-300">${profile.full_name}</span>. Aqui estão as suas consultas.</p>
+                             <p class="text-xs text-gray-400 mt-2">Esta lista atualiza automaticamente com novas consultas.</p>
                         </div>
                         <div class="mt-12"><h3 class="text-2xl font-cinzel mb-6">Minhas Consultas</h3><div id="reader-conversations-list" class="space-y-4"></div></div>
                     </div>
                 </div>`;
-            
+        }
+        
+        async function setupTarotReaderEventListeners(profile, user, client) {
+            await loadTarotReaderConversations(user, client);
             const statusToggle = document.getElementById('status-toggle');
             const statusText = document.getElementById('status-text');
-            
             const isOnline = profile.online_status === 'online';
             statusToggle.checked = isOnline;
             statusText.textContent = isOnline ? 'Online' : 'Offline';
@@ -186,72 +166,82 @@
             statusToggle.addEventListener('change', async (e) => {
                 const newStatus = e.target.checked ? 'online' : 'offline';
                 statusText.textContent = 'A atualizar...';
-                
                 const { error } = await client.from('profiles').update({ online_status: newStatus }).eq('id', user.id);
-
-                if(error) {
-                    statusText.textContent = "Erro!";
-                    alert("Não foi possível alterar o seu estado.");
-                    e.target.checked = !e.target.checked; // Reverte a mudança visual
-                } else {
-                    statusText.textContent = newStatus === 'online' ? 'Online' : 'Offline';
-                    statusText.classList.toggle('text-green-400', newStatus === 'online');
-                }
+                if (error) { statusText.textContent = "Erro!"; alert("Não foi possível alterar o seu estado."); e.target.checked = !e.target.checked;
+                } else { statusText.textContent = newStatus === 'online' ? 'Online' : 'Offline'; statusText.classList.toggle('text-green-400', newStatus === 'online'); }
             });
 
-            document.getElementById('profile-edit-form').addEventListener('submit', async (e) => { 
+            client.channel('new-consultations').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `tarot_reader_id=eq.${user.id}` }, payload => {
+                showToast(`Nova consulta recebida!`, 'info');
+                loadTarotReaderConversations(user, client, payload.new.id);
+            }).subscribe();
+            
+            document.getElementById('profile-edit-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const formData = new FormData(e.target);
-                const avatarFile = formData.get('avatar-upload');
-                const bio = formData.get('bio');
-                const specialties = formData.get('specialties').split(',').map(s => s.trim());
-
-                let avatarUrl = null;
-                if (avatarFile && avatarFile.size > 0) {
-                    // Upload da nova imagem
-                    const { data, error: uploadError } = await client.storage.from('avatars').upload(`public/${user.id}.png`, avatarFile, {
-                        cacheControl: '3600',
-                        upsert: true
-                    });
-
-                    if (uploadError) {
-                        painelError('Erro ao fazer upload da imagem. Tente novamente.');
-                        return;
-                    }
-
-                    avatarUrl = `https://your-supabase-url.supabase.co/storage/v1/object/public/avatars/public/${user.id}.png`;
-                } else {
-                    avatarUrl = document.getElementById('current-avatar-url').value;
+                const feedbackEl = document.getElementById('edit-feedback');
+                const submitBtn = e.target.querySelector('button');
+                submitBtn.disabled = true; submitBtn.textContent = 'A guardar...';
+                const avatarFile = e.target['avatar-upload'].files[0];
+                let avatarUrl = document.getElementById('current-avatar-url').value;
+                if (avatarFile) {
+                    const filePath = `public/${user.id}/${Date.now()}-${avatarFile.name}`;
+                    const { error: uploadError } = await client.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
+                    if (uploadError) { alert('Erro no upload da imagem: ' + uploadError.message); submitBtn.disabled = false; submitBtn.textContent = 'Guardar Alterações'; return; }
+                    const { data: urlData } = client.storage.from('avatars').getPublicUrl(filePath);
+                    avatarUrl = urlData.publicUrl;
                 }
-
-                // Atualização dos dados do perfil
-                const { error: updateError } = await client.from('profiles').update({
-                    avatar_url: avatarUrl,
-                    bio,
-                    specialties
-                }).eq('id', user.id);
-
-                if (updateError) {
-                    painelError('Erro ao atualizar o perfil. Tente novamente.');
-                    return;
-                }
-
-                painelAtualizado();
-                setTimeout(() => { window.location.reload(); }, 1500);
+                const specialtiesArray = e.target.specialties.value.split(',').map(s => s.trim()).filter(s => s);
+                const updatedProfile = { avatar_url: avatarUrl, bio: e.target.bio.value, specialties: specialtiesArray };
+                const { error } = await client.from('profiles').update(updatedProfile).eq('id', user.id);
+                if (error) { feedbackEl.textContent = "Erro ao guardar: " + error.message; feedbackEl.classList.add('text-red-400');
+                } else { feedbackEl.textContent = "Perfil atualizado!"; feedbackEl.classList.add('text-green-400'); document.getElementById('current-avatar-url').value = avatarUrl; }
+                submitBtn.disabled = false; submitBtn.textContent = 'Guardar Alterações';
+                setTimeout(() => { feedbackEl.textContent = ''; feedbackEl.classList.remove('text-red-400', 'text-green-400'); }, 4000);
+            });
+        }
+        
+        async function loadTarotReaderConversations(user, client, newConsultationId = null) {
+            const listContainer = document.getElementById('reader-conversations-list');
+            const { data: conversations, error } = await client.from('conversations').select(`id, status, created_at, client:client_id (full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`; return; }
+            if (conversations.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`; return; }
+            listContainer.innerHTML = '';
+            conversations.forEach(convo => {
+                const statusClasses = {'active': 'text-green-400','pending': 'text-yellow-400','finished': 'text-gray-500'};
+                const card = document.createElement('a');
+                card.href = `chat.html?id=${convo.id}`;
+                card.className = "block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-all";
+                if(convo.id === newConsultationId) { card.classList.add('highlight-new'); }
+                card.innerHTML = `<div class="flex justify-between items-center"><div><p class="text-xl font-bold">Consulta com <span class="text-purple-300">${convo.client.full_name || 'Cliente'}</span></p></div><div class="text-right"><p class="font-bold capitalize ${statusClasses[convo.status] || ''}">${convo.status}</p><span class="text-sm text-gray-500">Entrar →</span></div></div>`;
+                listContainer.appendChild(card);
+            });
+        }
+        
+        async function loadClientOrders(user, client) {
+            const listContainer = document.getElementById('orders-list');
+            listContainer.innerHTML = '<p class="text-gray-400">A carregar...</p>';
+            const { data, error } = await client.from('orders').select(`id, created_at, total_amount, status`).eq('user_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`; return; }
+            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não fez nenhum pedido.</div>`; return; }
+            listContainer.innerHTML = '';
+            data.forEach(order => {
+                const card = `<a href="pedido.html?id=${order.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><p class="font-bold">Pedido #${order.id.substring(0, 8)}</p><div><p class="font-bold text-lg text-purple-300">R$ ${order.total_amount.toFixed(2)}</p><p class="text-sm text-right capitalize">${order.status}</p></div></a>`;
+                listContainer.innerHTML += card;
             });
         }
 
-        // Exemplo de integração do toast no dashboard
-        function painelAtualizado() {
-            showToast('Painel atualizado!', 'success');
+        async function loadClientConversations(user, client) {
+            const listContainer = document.getElementById('client-conversations-list');
+            listContainer.innerHTML = '<p class="text-gray-400">A carregar...</p>';
+            const { data, error } = await client.from('conversations').select(`id, status, created_at, tarot_reader:tarot_reader_id (full_name)`).eq('client_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as consultas.</p>`; return; }
+            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não realizou nenhuma consulta.</div>`; return; }
+            listContainer.innerHTML = '';
+            data.forEach(convo => {
+                 const card = `<a href="chat.html?id=${convo.id}" class="block bg-gray-800/50 p-4 rounded-lg flex justify-between items-center hover:bg-gray-700/50"><div><p class="font-bold">Consulta com <span class="text-purple-300">${convo.tarot_reader.full_name}</span></p><p class="text-sm text-gray-400">${new Date(convo.created_at).toLocaleDateString()}</p></div><p class="font-bold capitalize">${convo.status}</p></a>`;
+                listContainer.innerHTML += card;
+            });
         }
-        function painelError(msg) {
-            showToast(msg || 'Erro ao atualizar painel.', 'error');
-        }
-
-        async function loadClientOrders(user, client) { /* ...código mantido... */ }
-        async function loadClientConversations(user, client) { /* ...código mantido... */ }
-        async function loadTarotReaderConversations(user, client) { /* ...código mantido... */ }
     </script>
 </body>
 </html>
