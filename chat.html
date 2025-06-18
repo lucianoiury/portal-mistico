@@ -105,7 +105,19 @@
             const messageInput = document.getElementById('message-input');
             const timerEl = document.getElementById('timer');
             const endSessionBtn = document.getElementById('end-session-btn');
-
+            // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
+            if(currentUser.id === conversationData.client_id && conversationData.status !== 'finished') {
+                endSessionBtn.classList.remove('hidden');
+                endSessionBtn.addEventListener('click', async () => {
+                    clearInterval(timerInterval);
+                    await supabaseClient.from('conversations').update({ status: 'finished', ended_at: new Date() }).eq('id', conversationId);
+                    timerEl.textContent = "Sessão Terminada";
+                    disableChat("Sessão encerrada pelo cliente.");
+                    endSessionBtn.disabled = true;
+                    showToast('Sessão encerrada com sucesso.', 'info');
+                });
+            }
+            
             let chatCredits = 0;
             let timerInterval;
             let conversationData = null;
@@ -217,7 +229,7 @@
             });
             
             // Exibe o botão apenas para o cliente e se a conversa não estiver terminada
-            if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
+            if(currentUser.id === conversationData.client_id && conversationData.status !== 'finished') {
                 endSessionBtn.classList.remove('hidden');
                 endSessionBtn.addEventListener('click', async () => {
                     clearInterval(timerInterval);
