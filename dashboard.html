@@ -159,19 +159,27 @@
             });
         }
         
-        async function loadTarotReaderConversations(user, client) {
+        async function loadTarotReaderConversations(user, client, newConsultationId = null) {
             const listContainer = document.getElementById('reader-conversations-list');
-            if(!listContainer) return;
-            listContainer.innerHTML = '<p>A carregar consultas...</p>';
-            const { data, error } = await client.from('conversations').select(`id, status, created_at, profiles!conversations_client_id_fkey(full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
-            if (error) { console.error(error); listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as consultas.</p>`; return; }
-            if (data.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`; return; }
+            const { data: conversations, error } = await client.from('conversations').select('id, status, created_at, client_id').eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
+            if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`; return; }
+            if (conversations.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`; return; }
             listContainer.innerHTML = '';
-            data.forEach(convo => {
-                const clientName = convo.profiles ? convo.profiles.full_name : 'Cliente Desconhecido';
-                const card = createConversationCard(convo, clientName);
+            for (const convo of conversations) {
+                // Buscar nome do cliente
+                let clientName = 'Cliente';
+                if (convo.client_id) {
+                    const { data: clientProfile } = await client.from('profiles').select('full_name').eq('id', convo.client_id).single();
+                    if (clientProfile && clientProfile.full_name) clientName = clientProfile.full_name;
+                }
+                const statusClasses = {'active': 'text-green-400','pending': 'text-yellow-400','finished': 'text-gray-500'};
+                const card = document.createElement('a');
+                card.href = `chat.html?id=${convo.id}`;
+                card.className = "block bg-gray-800/50 p-6 rounded-lg border border-purple-900/30 hover:border-purple-500 transition-all";
+                if(convo.id === newConsultationId) { card.classList.add('highlight-new'); }
+                card.innerHTML = `<div class="flex justify-between items-center"><div><p class="text-xl font-bold">Consulta com <span class="text-purple-300">${clientName}</span></p></div><div class="text-right"><p class="font-bold capitalize ${statusClasses[convo.status] || ''}">${convo.status}</p><span class="text-sm text-gray-500">Entrar →</span></div></div>`;
                 listContainer.appendChild(card);
-            });
+            }
         }
         
         async function loadClientOrders(user, client) {
