@@ -182,9 +182,12 @@
             function listenForNewMessages() {
                 const channel = supabaseClient
                     .channel(`messages_conv_${conversationId}`)
-                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
                         console.log('Nova mensagem recebida via realtime:', payload);
-                        if (payload.new.sender_id !== currentUser.id) {
+                        if (
+                            payload.new.conversation_id === conversationId &&
+                            payload.new.sender_id !== currentUser.id
+                        ) {
                             renderMessage(payload.new);
                             scrollToBottom();
                         }
