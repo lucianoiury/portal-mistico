@@ -202,7 +202,7 @@
         
         async function loadTarotReaderConversations(user, client, newConsultationId = null) {
             const listContainer = document.getElementById('reader-conversations-list');
-            const { data: conversations, error } = await client.from('conversations').select(`id, status, created_at, client:client_id (full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
+            const { data: conversations, error } = await client.from('conversations').select(`id, status, created_at, client:profiles!client_id (full_name)`).eq('tarot_reader_id', user.id).order('created_at', { ascending: false });
             if (error) { listContainer.innerHTML = `<p class="text-red-400">Não foi possível carregar as suas consultas.</p>`; return; }
             if (conversations.length === 0) { listContainer.innerHTML = `<div class="bg-gray-800/50 p-6 rounded-lg text-center text-gray-400">Você ainda não tem nenhuma consulta.</div>`; return; }
             listContainer.innerHTML = '';
