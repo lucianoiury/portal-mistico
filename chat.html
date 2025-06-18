@@ -180,15 +180,18 @@
             }
 
             function listenForNewMessages() {
-                supabaseClient
+                const channel = supabaseClient
                     .channel(`messages_conv_${conversationId}`)
                     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, payload => {
+                        console.log('Nova mensagem recebida via realtime:', payload);
                         if (payload.new.sender_id !== currentUser.id) {
                             renderMessage(payload.new);
                             scrollToBottom();
                         }
                     })
-                    .subscribe();
+                    .subscribe((status) => {
+                        console.log('Canal realtime status:', status);
+                    });
             }
 
             messageForm.addEventListener('submit', async (e) => {
