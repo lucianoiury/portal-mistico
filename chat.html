@@ -220,7 +220,7 @@
                 const channel = supabaseClient
                     .channel(`conversation_status_${conversationId}`)
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, payload => {
-                        if (payload.new.id === conversationId && payload.new.status === 'finished') {
+                        if (String(payload.new.id) === String(conversationId) && payload.new.status === 'finished') {
                             timerEl.textContent = "Sessão Terminada";
                             disableChat("Sessão encerrada.");
                             showToast('A sessão foi encerrada.', 'info');
