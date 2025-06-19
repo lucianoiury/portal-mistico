@@ -159,6 +159,7 @@
 
                 await loadMessages();
                 listenForNewMessages();
+                listenForConversationStatus();
                 
                 // Só inicia o temporizador se for o cliente e a conversa não estiver terminada
                 if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
@@ -213,6 +214,20 @@
                     .subscribe((status) => {
                         console.log('Canal realtime status:', status);
                     });
+            }
+
+            function listenForConversationStatus() {
+                const channel = supabaseClient
+                    .channel(`conversation_status_${conversationId}`)
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations', filter: `id=eq.${conversationId}` }, payload => {
+                        if (payload.new.status === 'finished') {
+                            timerEl.textContent = "Sessão Terminada";
+                            disableChat("Sessão encerrada.");
+                            showToast('A sessão foi encerrada.', 'info');
+                            endSessionBtn.classList.add('hidden');
+                        }
+                    })
+                    .subscribe();
             }
 
             messageForm.addEventListener('submit', async (e) => {
@@ -276,6 +291,7 @@
 
                 await loadMessages();
                 listenForNewMessages();
+                listenForConversationStatus();
                 
                 // Só inicia o temporizador se for o cliente e a conversa não estiver terminada
                 if(currentUser.id === conversation.client_id && conversation.status !== 'finished') {
