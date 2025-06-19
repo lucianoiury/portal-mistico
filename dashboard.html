@@ -126,13 +126,10 @@
             client.channel('new-consultations').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `tarot_reader_id=eq.${user.id}` }, async (payload) => {
                 const { data: newConvo, error } = await client.from('conversations').select(`*, client:client_id (full_name)`).eq('id', payload.new.id).single();
                 if (error || !newConvo) return;
-                showToast(`Nova consulta com ${newConvo.client.full_name}!`, 'info');
-                const listContainer = document.getElementById('reader-conversations-list');
-                const newCard = createConversationCard(newConvo, newConvo.client.full_name);
-                const noConsultationsMsg = listContainer.querySelector('div.text-center');
-                if(noConsultationsMsg) noConsultationsMsg.remove();
-                listContainer.prepend(newCard);
-                newCard.classList.add('highlight-new');
+                showToast(`Nova consulta com ${newConvo.client.full_name}! Redirecionando para o chat...`, 'info');
+                setTimeout(() => {
+                    window.location.href = `chat.html?id=${newConvo.id}`;
+                }, 2000); // Espera 2 segundos para mostrar o toast antes de redirecionar
             }).subscribe();
             
             document.getElementById('profile-edit-form').addEventListener('submit', async (e) => {
