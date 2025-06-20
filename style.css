@@ -14,6 +14,28 @@
   box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.4);
 }
 
+/* Estilos para botões com tema de bruxaria tecnológica */
+.btn-bruxaria {
+  background: linear-gradient(120deg, #4c1d95, #2e1065, #4c1d95);
+  background-size: 200%;
+  color: #facc15;
+  border: 1px solid #7e22ce;
+  box-shadow: 0 0 10px rgba(126, 34, 206, 0.5);
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-bruxaria:hover {
+  background-position: right;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(126, 34, 206, 0.8);
+  transform: translateY(-2px);
+}
+
+.btn-bruxaria:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(126, 34, 206, 0.5);
+}
+
 /* Animação de fade-in */
 .fade-in {
   opacity: 0;
