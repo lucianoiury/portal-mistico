@@ -50,6 +50,39 @@
   box-shadow: 0 0 10px rgba(126, 34, 206, 0.5);
 }
 
+/* Estilos para a página de bruxos */
+#bruxos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 20px;
+}
+
+.bruxo {
+    width: 300px;
+    margin: 20px;
+    padding: 20px;
+    background-color: #2d1a56;
+    border: 1px solid #7e22ce;
+    border-radius: 10px;
+    text-align: center;
+    color: #ddd;
+}
+
+.bruxo img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+}
+
+.bruxo h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #facc15;
+}
+
 .btn-bruxaria:hover {
   background-position: right;
   color: #fff;

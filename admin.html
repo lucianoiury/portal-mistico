@@ -32,7 +32,10 @@
 
         <main class="container mx-auto p-8">
             <div class="mb-8 border-b border-gray-700">
-                <nav class="flex space-x-4"><button id="tab-products" class="tab-btn active px-4 py-2">Gerir Produtos</button></nav>
+                <nav class="flex space-x-4">
+                    <button id="tab-products" class="tab-btn active px-4 py-2">Gerir Produtos</button>
+                    <button id="tab-bruxos" class="tab-btn px-4 py-2">Gerir Bruxos</button>
+                </nav>
             </div>
 
             <div id="products-content">
@@ -61,6 +64,19 @@
                         <div id="products-list" class="space-y-4"></div>
                     </div>
                 </div>
+            </div>
+
+            <div id="bruxos-content" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-purple-300">Gerir Bruxos</h2>
+                <form id="bruxos-form" class="bg-gray-800/50 p-6 rounded-lg space-y-4">
+                    <div>
+                        <label for="bruxos-html" class="block mb-1">Conteúdo da Página (HTML)</label>
+                        <textarea id="bruxos-html" rows="10" required class="w-full bg-gray-700 p-2 rounded text-white">
+                            <!-- Conteúdo atual da página bruxos.html -->
+                        </textarea>
+                    </div>
+                    <button type="submit" id="bruxos-submit-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 disabled:opacity-50">Guardar Alterações</button>
+                </form>
             </div>
         </main>
     </div>
