@@ -7,8 +7,46 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-gray-200 bg-cover bg-center" style="background-image: linear-gradient(rgba(17, 24, 39, 0.4), rgba(17, 24, 39, 1)), url('imagens/Templo1.jpg');">
-    <header>
-        <h1 class="text-2xl font-bold font-cinzel text-yellow-300">Os Bruxos do Clã</h1>
+    <header class="bg-yellow-500/80 backdrop-blur-sm sticky top-0 z-50 border-b border-yellow-900/50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-yellow-300">Clã Michetti</a>
+            
+            <!-- Menu para Desktop -->
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="loja.html" class="btn-bruxaria">Loja</a>
+                <a href="tarologos.html" class="btn-bruxaria">Tarólogos</a>
+                <a href="bruxos.html" class="btn-bruxaria">Os Bruxos do Clã</a>
+            </div>
+
+            <!-- Botões de Auth (Visitante ou Utilizador) -->
+            <div id="auth-buttons-container" class="hidden md:flex items-center space-x-4">
+                 <a href="login.html" id="login-btn" class="hidden sm:block btn-bruxaria px-4 py-2 rounded-lg">Login</a>
+                <a href="cadastro.html" id="signup-btn" class="btn-bruxaria px-4 py-2 rounded-lg">Cadastre-se</a>
+                <a href="dashboard.html" id="dashboard-btn" class="hidden btn-bruxaria px-4 py-2 rounded-lg">Meu Painel</a>
+                <a href="admin.html" id="admin-btn" class="btn-bruxaria px-4 py-2 rounded-lg">Admin</a>
+            </div>
+
+            <!-- Botão do Menu Mobile (Hambúrguer) -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-button" class="text-gray-200 hover:text-white focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <!-- Menu Mobile (Dropdown) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-gray-900/95 pb-4">
+            <a href="loja.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Loja</a>
+            <a href="tarologos.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Tarólogos</a>
+            <a href="bruxos.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Os Bruxos do Clã</a>
+            <div id="mobile-auth-links" class="border-t border-purple-900 mt-2 pt-2">
+                 <a href="login.html" id="mobile-login-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Login</a>
+                 <a href="cadastro.html" id="mobile-signup-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Cadastre-se</a>
+                 <a href="dashboard.html" id="mobile-dashboard-btn" class="hidden block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Meu Painel</a>
+                 <a href="admin.html" id="admin-btn" class="btn-bruxaria px-4 py-2 rounded-lg">Admin</a>
+            </div>
+        </div>
+    </header>
+    <h1 class="text-2xl font-bold font-cinzel text-yellow-300">Os Bruxos do Clã</h1>
         <nav>
             <a href="index.html">Início</a>
         </nav>
