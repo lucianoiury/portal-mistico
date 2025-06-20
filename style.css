@@ -24,6 +24,32 @@
   transition: all 0.3s ease-in-out;
 }
 
+/* Importa a fonte UnifrakturMaguntia do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
+
+/* Estilos para botões com tema de bruxaria tecnológica */
+.btn-bruxaria {
+  background: linear-gradient(120deg, #4c1d95, #2e1065, #4c1d95);
+  background-size: 200%;
+  color: #facc15;
+  border: 1px solid #7e22ce;
+  box-shadow: 0 0 10px rgba(126, 34, 206, 0.5);
+  transition: all 0.3s ease-in-out;
+  font-family: 'UnifrakturMaguntia', cursive; /* Aplica a fonte */
+}
+
+.btn-bruxaria:hover {
+  background-position: right;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(126, 34, 206, 0.8);
+  transform: translateY(-2px);
+}
+
+.btn-bruxaria:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(126, 34, 206, 0.5);
+}
+
 .btn-bruxaria:hover {
   background-position: right;
   color: #fff;
