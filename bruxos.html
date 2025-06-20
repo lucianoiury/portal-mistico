@@ -13,47 +13,28 @@
             
             <!-- Menu para Desktop -->
             <div class="hidden md:flex items-center space-x-6">
-                <a href="loja.html" class="btn-bruxaria hover:text-purple-300 transition-colors">Loja</a>
-                <a href="tarologos.html" class="btn-bruxaria hover:text-purple-300 transition-colors">Tarólogos</a>
-                <a href="bruxos.html" class="btn-bruxaria hover:text-purple-300 transition-colors">Os Bruxos do Clã</a>
+                <a href="loja.html" class="hover:text-purple-300 transition-colors">Loja</a>
+                <a href="tarologos.html" class="hover:text-purple-300 transition-colors">Tarólogos</a>
+                <a href="bruxos.html" class="hover:text-purple-300 transition-colors">Os Bruxos do Clã</a>
             </div>
 
             <!-- Botões de Auth (Visitante ou Utilizador) -->
             <div id="auth-buttons-container" class="hidden md:flex items-center space-x-4">
-                 <a href="login.html" id="login-btn" class="hidden sm:block btn-bruxaria px-4 py-2 rounded-lg hover:bg-yellow-400 hover:text-gray-900">Login</a>
-                <a href="cadastro.html" id="signup-btn" class="btn-bruxaria px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Cadastre-se</a>
-                <a href="dashboard.html" id="dashboard-btn" class="hidden btn-bruxaria px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Meu Painel</a>
-                <a href="admin.html" id="admin-btn" class="btn-bruxaria px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Admin</a>
+                 <a href="login.html" id="login-btn" class="hidden sm:block  px-4 py-2 rounded-lg hover:bg-yellow-400 hover:text-gray-900">Login</a>
+                <a href="cadastro.html" id="signup-btn" class=" px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Cadastre-se</a>
+                <a href="dashboard.html" id="dashboard-btn" class="hidden  px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Meu Painel</a>
+                <a href="admin.html" id="admin-btn" class=" px-4 py-2 rounded-lg hover:bg-yellow-700 hover:text-white">Admin</a>
             </div>
-
-            <!-- Botão do Menu Mobile (Hambúrguer) -->
-            <div class="md:hidden flex items-center">
-                <button id="mobile-menu-button" class="text-gray-200 hover:text-white focus:outline-none">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                </button>
-            </div>
-        </nav>
-        <!-- Menu Mobile (Dropdown) -->
-        <div id="mobile-menu" class="hidden md:hidden bg-gray-900/95 pb-4">
-            <a href="loja.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Loja</a>
-            <a href="tarologos.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Tarólogos</a>
-            <a href="bruxos.html" class="block py-2 px-6 text-sm hover:bg-gray-700/50">Os Bruxos do Clã</a>
-            <div id="mobile-auth-links" class="border-t border-purple-900 mt-2 pt-2">
-                 <a href="login.html" id="mobile-login-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Login</a>
-                 <a href="cadastro.html" id="mobile-signup-btn" class="block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Cadastre-se</a>
-                 <a href="dashboard.html" id="mobile-dashboard-btn" class="hidden block py-2 px-6 text-sm hover:bg-gray-700/50 btn-bruxaria">Meu Painel</a>
-                 <a href="admin.html" id="admin-btn" class="btn-bruxaria px-4 py-2 rounded-lg">Admin</a>
-            </div>
-        </div>
-    </header>
-    <div class="container mx-auto px-6 py-8">
-        <h1 class="text-5xl md:text-7xl font-bold font-cinzel text-yellow-300 mb-4 text-center text-glow">Os Bruxos do Clã</h1>
-    </div>
-        <nav>
-            <a href="index.html">Início</a>
+       </nav>
+   </header>
+   <div class="container mx-auto px-6 py-8">
+       <h1 class="text-5xl md:text-7xl font-bold font-cinzel text-yellow-300 mb-4 text-center text-glow">Os Bruxos do Clã</h1>
+   </div>
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold font-cinzel text-yellow-300">Clã Michetti</a>
         </nav>
     </header>
-    <main>
+    <main class="container mx-auto px-6 py-8">
         <section id="bruxos">
             <div class="bruxo">
                 <img src="imagens/bruxo1.jpg" alt="Bruxo Exemplo 1">
